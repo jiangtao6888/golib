@@ -3,8 +3,8 @@ package kafka
 import (
 	"context"
 	"github.com/Shopify/sarama"
-	"github.com/Zivn/golib/logger"
 	cluster "github.com/bsm/sarama-cluster"
+	"github.com/marsmay/golib/logger"
 	"sync"
 )
 

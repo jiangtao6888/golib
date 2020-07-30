@@ -2,7 +2,7 @@ package zookeeper
 
 import (
 	"context"
-	"github.com/Zivn/golib/logger"
+	"github.com/marsmay/golib/logger"
 	"github.com/samuel/go-zookeeper/zk"
 	"strings"
 	"sync"

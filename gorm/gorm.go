@@ -3,9 +3,9 @@ package gorm
 import (
 	"errors"
 	"fmt"
-	"github.com/Zivn/golib/logger"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
+	"github.com/marsmay/golib/logger"
 	"strings"
 	"sync"
 	"time"

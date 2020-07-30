@@ -1,4 +1,4 @@
-module github.com/Zivn/golib
+module github.com/marsmay/golib
 
 go 1.12
 

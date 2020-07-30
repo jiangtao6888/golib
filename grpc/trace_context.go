@@ -3,7 +3,7 @@ package grpc
 import (
 	"context"
 	"fmt"
-	"github.com/Zivn/golib/net2"
+	"github.com/marsmay/golib/net2"
 	"google.golang.org/grpc/metadata"
 	"strconv"
 	"strings"

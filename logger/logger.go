@@ -2,7 +2,7 @@ package logger
 
 import (
 	"fmt"
-	"github.com/Zivn/golib/net2"
+	"github.com/marsmay/golib/net2"
 	"os"
 	"path"
 	"runtime"

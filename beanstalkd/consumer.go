@@ -2,8 +2,8 @@ package beanstalkd
 
 import (
 	"context"
-	"github.com/Zivn/golib/logger"
 	"github.com/kr/beanstalk"
+	"github.com/marsmay/golib/logger"
 	"sync"
 	"time"
 )

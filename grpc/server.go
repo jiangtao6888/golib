@@ -2,7 +2,7 @@ package grpc
 
 import (
 	"context"
-	"github.com/Zivn/golib/logger"
+	"github.com/marsmay/golib/logger"
 	"google.golang.org/grpc"
 	"net"
 	"strconv"
