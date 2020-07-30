@@ -2,15 +2,15 @@ package grpc
 
 import (
 	"context"
-	"github.com/opay-o2o/golib/logger"
 	"google.golang.org/grpc"
 	"net"
+	"github.com/Zivn/golib/logger"
 	"strconv"
 )
 
 type Config struct {
-	Host string `toml:"host"`
-	Port int    `toml:"port"`
+	Host string `toml:"host" json:"host"`
+	Port int    `toml:"port" json:"port"`
 }
 
 func (c *Config) GetAddr() string {

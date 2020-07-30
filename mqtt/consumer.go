@@ -2,17 +2,17 @@ package mqtt
 
 import (
 	"context"
-	"errors"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/opay-o2o/golib/logger"
+	"github.com/Zivn/golib/logger"
 	"sync"
 	"time"
 )
 
 type ConsumerConfig struct {
-	*Config
-	Timeout time.Duration `toml:"timeout"`
-	Worker  int           `toml:"worker"`
+	*ConnectConfig
+	ClientId string        `toml:"client_id"`
+	Timeout  time.Duration `toml:"timeout"`
+	Worker   int           `toml:"worker"`
 }
 
 type Consumer struct {
@@ -26,10 +26,16 @@ type Consumer struct {
 	wg       *sync.WaitGroup
 }
 
-func (c *Consumer) run() (err error) {
-	if c.client, err = connect(c.c.Config); err != nil {
-		return
-	}
+func (c *Consumer) GetOptions() *mqtt.ClientOptions {
+	return c.c.GetOptions()
+}
+
+func (c *Consumer) GetClientID() string {
+	return c.c.ClientId
+}
+
+func (c *Consumer) ConnectHandler(client mqtt.Client) {
+	c.logger.Debugf("mqtt connected | addr: %s", c.c.ConnectConfig.GetAddr())
 
 	filters := make(map[string]byte, len(c.handlers))
 
@@ -37,15 +43,25 @@ func (c *Consumer) run() (err error) {
 		filters[t] = c.c.QoS
 	}
 
-	token := c.client.SubscribeMultiple(filters, func(client mqtt.Client, msg mqtt.Message) {
+	token := client.SubscribeMultiple(filters, func(client mqtt.Client, msg mqtt.Message) {
 		c.msgQueue <- msg
 	})
 
 	if ok := token.WaitTimeout(c.c.Timeout * time.Millisecond); !ok {
-		return errors.New("subscribe timeout")
+		c.logger.Errorf("mqtt subscribe timeout | filters: %+v", filters)
 	}
 
-	if err = token.Error(); err != nil {
+	if err := token.Error(); err != nil {
+		c.logger.Errorf("mqtt subscribe failed | filters: %+v | error: %s", filters, err)
+	}
+}
+
+func (c *Consumer) DisconnectHandler(_ mqtt.Client, err error) {
+	c.logger.Debugf("mqtt lost connection | addr: %s | error: %s", c.c.ConnectConfig.GetAddr(), err)
+}
+
+func (c *Consumer) run() (err error) {
+	if c.client, err = connect(c); err != nil {
 		return
 	}
 

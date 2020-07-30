@@ -24,26 +24,31 @@ type Pool struct {
 	clients map[string]*redis.Client
 }
 
-func (p *Pool) Add(name string, c *Config) {
+func (p *Pool) Add(name string, conf *Config) {
 	p.locker.Lock()
 	defer p.locker.Unlock()
 
-	p.clients[name] = redis.NewClient(&redis.Options{Addr: c.GetAddr(), Password: c.Password, DB: c.Database, PoolSize: c.PoolSize})
+	p.clients[name] = redis.NewClient(&redis.Options{
+		Addr:     conf.GetAddr(),
+		Password: conf.Password,
+		DB:       conf.Database,
+		PoolSize: conf.PoolSize,
+	})
 }
 
-func (p *Pool) Get(name string) (*redis.Client, error) {
+func (p *Pool) Get(name string) (client *redis.Client, err error) {
 	p.locker.RLock()
 	defer p.locker.RUnlock()
 
 	client, ok := p.clients[name]
 
-	if ok {
-		return client, nil
+	if !ok {
+		err = errors.New("no redis client")
 	}
 
-	return nil, errors.New("no redis client")
+	return
 }
 
 func NewPool() *Pool {
-	return &Pool{clients: make(map[string]*redis.Client, 64)}
+	return &Pool{clients: make(map[string]*redis.Client, 16)}
 }

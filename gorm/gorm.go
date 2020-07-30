@@ -5,24 +5,24 @@ import (
 	"fmt"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
-	"github.com/opay-o2o/golib/logger"
+	"github.com/Zivn/golib/logger"
 	"strings"
 	"sync"
 	"time"
 )
 
 type Config struct {
-	Host         string `toml:"host"`
-	Port         uint   `toml:"port"`
-	User         string `toml:"user"`
-	Password     string `toml:"password"`
-	Charset      string `toml:"charset"`
-	Database     string `toml:"database"`
+	Host         string `toml:"host" json:"host"`
+	Port         uint   `toml:"port" json:"port"`
+	User         string `toml:"user" json:"user"`
+	Password     string `toml:"password" json:"password"`
+	Charset      string `toml:"charset" json:"charset"`
+	Database     string `toml:"database" json:"database"`
 	Timeout      int    `toml:"timeout" json:"timeout"`
 	MaxOpenConns int    `toml:"max_open_conns" json:"max_open_conns"`
 	MaxIdleConns int    `toml:"max_idle_conns" json:"max_idle_conns"`
 	MaxConnTtl   int    `toml:"max_conn_ttl" json:"max_conn_ttl"`
-	Debug        bool   `toml:"debug"`
+	Debug        bool   `toml:"debug" json:"debug"`
 }
 
 func (c *Config) GetDsn() string {

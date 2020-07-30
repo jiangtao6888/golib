@@ -3,29 +3,26 @@ package beanstalkd
 import (
 	"context"
 	"github.com/kr/beanstalk"
-	"github.com/opay-o2o/golib/logger"
+	"github.com/Zivn/golib/logger"
 	"sync"
 	"time"
 )
 
-type AddrList struct {
-	Addrs []string `toml:"addrs"`
-}
-
 type ConsumerConfig struct {
-	Addrs  []string `toml:"addrs"`
-	Tube   string   `toml:"tube"`
-	Worker int      `toml:"worker"`
+	*AddrList
+	Tube   string `toml:"tube" json:"tube"`
+	Worker int    `toml:"worker" json:"worker"`
 }
 
 type Consumer struct {
-	c        *ConsumerConfig
-	msgQueue chan []byte
-	handler  func([]byte)
-	logger   *logger.Logger
-	ctx      context.Context
-	cancel   context.CancelFunc
-	wg       *sync.WaitGroup
+	c       *ConsumerConfig
+	queue   chan []byte
+	handler func([]byte)
+	conns   *Conns
+	logger  *logger.Logger
+	ctx     context.Context
+	cancel  context.CancelFunc
+	wg      *sync.WaitGroup
 }
 
 func (c *Consumer) run() {
@@ -48,80 +45,71 @@ func (c *Consumer) Stop() {
 func (c *Consumer) handle() {
 	defer c.wg.Done()
 
-	for {
-		select {
-		case <-c.ctx.Done():
-			return
-		case msg := <-c.msgQueue:
-			c.handler(msg)
-		}
+	for msg := range c.queue {
+		c.handler(msg)
 	}
 }
 
-func (c *Consumer) receive(addr string) {
-	defer c.wg.Done()
+func (c *Consumer) consume(addr string) (err error) {
+	conn := c.conns.Get(addr)
 
-	var (
-		tubeSet *beanstalk.TubeSet
-		err     error
-	)
+	if conn == nil {
+		if conn, err = reconnect(addr); err != nil {
+			return
+		}
+
+		c.conns.Set(addr, conn)
+	}
+
+	tubeSet := beanstalk.NewTubeSet(conn, c.c.Tube)
+	id, body, err := tubeSet.Reserve(3 * time.Second)
+
+	if err != nil {
+		if e, ok := err.(beanstalk.ConnError); ok && e.Err == beanstalk.ErrTimeout {
+			err = nil
+		}
+
+		return
+	}
+
+	if err = conn.Delete(id); err != nil {
+		return
+	}
+
+	c.queue <- body
+	c.logger.Debugf("receive beanstalkd job | id: %d | msg: %s", id, body)
+	return
+}
+
+func (c *Consumer) receive(addr string) {
+	defer close(c.queue)
+	defer c.wg.Done()
 
 	for {
 		select {
 		case <-c.ctx.Done():
 			return
 		default:
-			if tubeSet == nil {
-				tubeSet, err = newTubeSet(addr, c.c.Tube)
+			if err := c.consume(addr); err != nil {
+				c.logger.Errorf("consume beanstalkd queue failed | addr: %s | tube: %s | error: %s", addr, c.c.Tube, err)
 
-				if err != nil {
-					c.logger.Errorf("can't connect beanstalkd server | addr: %s | tube: %s | error: %s", addr, c.c.Tube, err)
-					time.Sleep(time.Second)
-					continue
-				}
-			}
-
-			id, body, err := tubeSet.Reserve(5 * time.Second)
-
-			if err != nil {
-				if e, ok := err.(beanstalk.ConnError); ok && e.Err == beanstalk.ErrTimeout {
-					continue
-				}
-
-				c.logger.Errorf("can't reserve job | addr: %s | tube: %s | error: %s", addr, c.c.Tube, err)
-
-				tubeSet = nil
-				time.Sleep(3 * time.Second)
+				c.conns.Set(addr, nil)
+				time.Sleep(time.Second * 3)
 				continue
-			}
-
-			c.msgQueue <- body
-
-			if err := tubeSet.Conn.Delete(id); err != nil {
-				c.logger.Errorf("can't delete job | addr: %s | tube: %s | id: %d | error: %s", addr, c.c.Tube, id, err)
 			}
 		}
 	}
 
 }
 
-func newTubeSet(addr string, tube string) (*beanstalk.TubeSet, error) {
-	conn, err := beanstalk.Dial("tcp", addr)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return beanstalk.NewTubeSet(conn, tube), nil
-}
-
 func NewConsumer(c *ConsumerConfig, handler func([]byte), logger *logger.Logger) *Consumer {
 	consumer := &Consumer{
-		c:        c,
-		msgQueue: make(chan []byte, 32),
-		handler:  handler,
-		logger:   logger,
-		wg:       &sync.WaitGroup{},
+		c:       c,
+		queue:   make(chan []byte, 32),
+		handler: handler,
+		conns:   &Conns{conns: make(map[string]*beanstalk.Conn, len(c.Addrs))},
+		logger:  logger,
+		wg:      &sync.WaitGroup{},
 	}
 
 	consumer.ctx, consumer.cancel = context.WithCancel(context.Background())

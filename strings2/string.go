@@ -3,9 +3,15 @@ package strings2
 import (
 	"fmt"
 	"math/rand"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
+)
+
+var (
+	regHtmlTag   = regexp.MustCompile("\\<[\\S\\s]+?\\>")
+	regHtmlSpace = regexp.MustCompile("\\s{2,}")
 )
 
 type Params map[string]interface{}
@@ -39,17 +45,55 @@ func InArray(val string, list []string) (exists bool) {
 	return
 }
 
-func ToIntArray(s, separator string) []int64 {
+func ToNsArray(s, separator string) []string {
 	items := strings.Split(s, separator)
-	numbers := make([]int64, 0, len(items))
+	numbers := make([]string, 0, len(items))
 
 	for _, v := range items {
 		if n, e := strconv.ParseInt(v, 10, 64); e == nil {
+			numbers = append(numbers, strconv.FormatInt(n, 10))
+		}
+	}
+
+	return numbers
+}
+
+func ToIntArray(s, separator string) []int {
+	items := strings.Split(s, separator)
+	numbers := make([]int, 0, len(items))
+
+	for _, v := range items {
+		if n, e := strconv.Atoi(v); e == nil {
 			numbers = append(numbers, n)
 		}
 	}
 
 	return numbers
+}
+
+func FromIntArray(nums []int, separator string) string {
+	items := make([]string, 0, len(nums))
+
+	for _, v := range nums {
+		items = append(items, strconv.Itoa(v))
+	}
+
+	return strings.Join(items, separator)
+}
+
+func Unique(list []string) []string {
+	result := make([]string, 0, len(list))
+	flags := make(map[string]bool, len(list))
+
+	for _, v := range list {
+		if !flags[v] {
+			result = append(result, v)
+		}
+
+		flags[v] = true
+	}
+
+	return result
 }
 
 func ListToSet(list []string) map[string]bool {
@@ -109,4 +153,11 @@ func Template(t string, params map[string]interface{}) string {
 	}
 
 	return strings.NewReplacer(pairs...).Replace(t)
+}
+
+func TrimHtmlTags(s string) string {
+	s = regHtmlTag.ReplaceAllString(s, "\n")
+	s = regHtmlSpace.ReplaceAllString(s, "\n")
+	s = strings.ReplaceAll(s, "&nbsp;", " ")
+	return strings.TrimSpace(s)
 }

@@ -4,14 +4,14 @@ import (
 	stdCtx "context"
 	"errors"
 	"fmt"
-	"github.com/kataras/iris"
-	"github.com/kataras/iris/context"
-	"github.com/opay-o2o/golib/logger"
+	"github.com/kataras/iris/v12"
+	"github.com/kataras/iris/v12/context"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/peer"
 	"net"
+	"github.com/Zivn/golib/logger"
 	"strconv"
 	"strings"
 	"time"
@@ -19,28 +19,27 @@ import (
 
 const (
 	TypeCounter = iota
-	TypeHistogram
 	TypeGauge
+	TypeHistogram
 	TypeSummary
 )
 
 var (
 	// DefaultBuckets prometheus buckets in seconds.
-	DefaultBuckets = []float64{0.3, 1.2, 5.0}
+	DefaultBuckets = []float64{0.1, 0.3, 0.5, 1.0, 3.0, 5.0}
 )
 
 type VectorConfig struct {
-	Name   string   `toml:"name"`
-	Desc   string   `toml:"desc"`
-	Type   int      `toml:"type"`
-	Labels []string `toml:"labels"`
+	Name             string   `toml:"name" json:"name"`
+	Desc             string   `toml:"desc" json:"desc"`
+	Type             int      `toml:"type" json:"type"`
+	Labels           []string `toml:"labels" json:"labels"`
+	IgnoreConstLabel bool     `toml:"ignore_const_label" json:"ignore_const_label"`
 }
 
 type Config struct {
-	Env     string          `toml:"env"`
-	Service string          `toml:"service"`
-	Host    string          `toml:"host"`
-	Vectors []*VectorConfig `toml:"vectors"`
+	ConstLabels map[string]string `toml:"const_labels" json:"const_labels"`
+	Vectors     []*VectorConfig   `toml:"vectors" json:"vectors"`
 }
 
 type Vector struct {
@@ -56,15 +55,105 @@ func (v *Vector) Trigger(value float64, labels ...string) {
 	}
 
 	switch v.config.Type {
-	case TypeHistogram:
-		v.vec.(*prometheus.HistogramVec).WithLabelValues(labels...).Observe(value)
 	case TypeGauge:
 		v.vec.(*prometheus.GaugeVec).WithLabelValues(labels...).Set(value)
+	case TypeHistogram:
+		v.vec.(*prometheus.HistogramVec).WithLabelValues(labels...).Observe(value)
 	case TypeSummary:
 		v.vec.(*prometheus.SummaryVec).WithLabelValues(labels...).Observe(value)
 	case TypeCounter:
 		v.vec.(*prometheus.CounterVec).WithLabelValues(labels...).Inc()
 	}
+}
+
+// NOTE: vector type must is Histogram or Summary
+func (v *Vector) HttpInterceptor(ctx context.Context) {
+	start := time.Now()
+	ctx.Next()
+
+	r := ctx.Request()
+	statusCode := strconv.Itoa(ctx.GetStatusCode())
+	duration := float64(time.Since(start).Nanoseconds()) / 1000000000
+	labels := []string{statusCode, r.Method, r.URL.Path}
+
+	v.Trigger(duration, labels...)
+}
+
+func getClietIP(ctx stdCtx.Context) (ip string, err error) {
+	pr, ok := peer.FromContext(ctx)
+
+	if !ok {
+		err = fmt.Errorf("invoke FromContext() failed")
+		return
+	}
+
+	if pr.Addr == net.Addr(nil) {
+		err = fmt.Errorf("peer.Addr is nil")
+		return
+	}
+
+	ip = strings.Split(pr.Addr.String(), ":")[0]
+	return
+}
+
+// NOTE: vector type must is Histogram or Summary
+func (v *Vector) GrpcServerUnaryInterceptor(ctx stdCtx.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
+	start := time.Now()
+	clientIp := "unknown"
+
+	if ip, e := getClietIP(ctx); e == nil {
+		clientIp = ip
+	}
+
+	resp, err = handler(ctx, req)
+	duration := float64(time.Since(start).Nanoseconds()) / 1000000000
+	labels := []string{info.FullMethod, clientIp}
+
+	v.Trigger(duration, labels...)
+	return
+}
+
+// NOTE: vector type must is Histogram or Summary
+func (v *Vector) GrpcServerStreamInterceptor(srv interface{}, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) (err error) {
+	start := time.Now()
+	clientIp := "unknown"
+
+	if ip, e := getClietIP(stream.Context()); e == nil {
+		clientIp = ip
+	}
+
+	err = handler(srv, stream)
+	duration := float64(time.Since(start).Nanoseconds()) / 1000000000
+	labels := []string{info.FullMethod, clientIp}
+
+	v.Trigger(duration, labels...)
+	return
+}
+
+// NOTE: vector type must is Histogram or Summary
+func (v *Vector) GrpcClientUnaryInterceptor(ctx stdCtx.Context, method string, req, resp interface{}, conn *grpc.ClientConn, invoker grpc.UnaryInvoker, options ...grpc.CallOption) (err error) {
+	start := time.Now()
+	err = invoker(ctx, method, req, resp, conn, options...)
+	duration := float64(time.Since(start).Nanoseconds()) / 1000000000
+	labels := []string{method, conn.Target()}
+
+	v.Trigger(duration, labels...)
+	return
+}
+
+// NOTE: vector type must is Histogram or Summary
+func (v *Vector) GrpcClientStreamInterceptor(ctx stdCtx.Context, desc *grpc.StreamDesc, conn *grpc.ClientConn, method string, streamer grpc.Streamer, options ...grpc.CallOption) (stream grpc.ClientStream, err error) {
+	start := time.Now()
+	stream, err = streamer(ctx, desc, conn, method, options...)
+	duration := float64(time.Since(start).Nanoseconds()) / 1000000000
+	labels := []string{method, conn.Target()}
+
+	v.Trigger(duration, labels...)
+	return
+}
+
+func (v *Vector) Config() *VectorConfig {
+	return v.config
 }
 
 type Monitor struct {
@@ -74,8 +163,13 @@ type Monitor struct {
 }
 
 func (m *Monitor) Register(config *VectorConfig) (err error) {
+	constLabels := m.config.ConstLabels
+
+	if config.IgnoreConstLabel {
+		constLabels = nil
+	}
+
 	var vec prometheus.Collector
-	constLabels := map[string]string{"service": m.config.Service, "env": m.config.Env, "host": m.config.Host}
 
 	switch config.Type {
 	case TypeHistogram:
@@ -145,125 +239,6 @@ func (m *Monitor) Vector(name string) (vector *Vector) {
 	}
 
 	vector = vec
-	return
-}
-
-func (m *Monitor) Group(counter, timer string) (group *VectorGroup) {
-	counterVector, ok := m.vectors[counter]
-
-	if !ok {
-		m.logger.Errorf("unknown monitor vector | name: %s", counter)
-		return
-	}
-
-	timerVector, ok := m.vectors[timer]
-
-	if !ok {
-		m.logger.Errorf("unknown monitor vector | name: %s", timer)
-		return
-	}
-
-	group = &VectorGroup{counterVector, timerVector, m.logger}
-	return
-}
-
-type VectorGroup struct {
-	counter *Vector
-	timer   *Vector
-	logger  *logger.Logger
-}
-
-func (g *VectorGroup) HttpInterceptor(ctx context.Context) {
-	start := time.Now()
-	ctx.Next()
-
-	r := ctx.Request()
-	statusCode := strconv.Itoa(ctx.GetStatusCode())
-	duration := float64(time.Since(start).Nanoseconds()) / 1000000000
-	labels := []string{statusCode, r.Method, r.URL.Path}
-
-	g.counter.Trigger(0, labels...)
-	g.timer.Trigger(duration, labels...)
-}
-
-func getClietIP(ctx stdCtx.Context) (ip string, err error) {
-	pr, ok := peer.FromContext(ctx)
-
-	if !ok {
-		err = fmt.Errorf("invoke FromContext() failed")
-		return
-	}
-
-	if pr.Addr == net.Addr(nil) {
-		err = fmt.Errorf("peer.Addr is nil")
-		return
-	}
-
-	ip = strings.Split(pr.Addr.String(), ":")[0]
-	return
-}
-
-func (g *VectorGroup) GrpcServerUnaryInterceptor(ctx stdCtx.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
-	start := time.Now()
-	clientIp := "unknown"
-
-	if ip, e := getClietIP(ctx); e == nil {
-		clientIp = ip
-	}
-
-	resp, err = handler(ctx, req)
-
-	duration := float64(time.Since(start).Nanoseconds()) / 1000000000
-	labels := []string{info.FullMethod, clientIp}
-
-	g.counter.Trigger(0, labels...)
-	g.timer.Trigger(duration, labels...)
-
-	return
-}
-
-func (g *VectorGroup) GrpcServerStreamInterceptor(srv interface{}, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) (err error) {
-	start := time.Now()
-	clientIp := "unknown"
-
-	if ip, e := getClietIP(stream.Context()); e == nil {
-		clientIp = ip
-	}
-
-	err = handler(srv, stream)
-
-	duration := float64(time.Since(start).Nanoseconds()) / 1000000000
-	labels := []string{info.FullMethod, clientIp}
-
-	g.counter.Trigger(0, labels...)
-	g.timer.Trigger(duration, labels...)
-
-	return
-}
-
-func (g *VectorGroup) GrpcClientUnaryInterceptor(ctx stdCtx.Context, method string, req, resp interface{}, conn *grpc.ClientConn, invoker grpc.UnaryInvoker, options ...grpc.CallOption) (err error) {
-	start := time.Now()
-	err = invoker(ctx, method, req, resp, conn, options...)
-
-	duration := float64(time.Since(start).Nanoseconds()) / 1000000000
-	labels := []string{method, conn.Target()}
-
-	g.counter.Trigger(0, labels...)
-	g.timer.Trigger(duration, labels...)
-
-	return
-}
-
-func (g *VectorGroup) GrpcClientStreamInterceptor(ctx stdCtx.Context, desc *grpc.StreamDesc, conn *grpc.ClientConn, method string, streamer grpc.Streamer, options ...grpc.CallOption) (stream grpc.ClientStream, err error) {
-	start := time.Now()
-	stream, err = streamer(ctx, desc, conn, method, options...)
-
-	duration := float64(time.Since(start).Nanoseconds()) / 1000000000
-	labels := []string{method, conn.Target()}
-
-	g.counter.Trigger(0, labels...)
-	g.timer.Trigger(duration, labels...)
-
 	return
 }
 

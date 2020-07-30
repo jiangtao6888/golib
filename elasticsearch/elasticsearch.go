@@ -40,7 +40,7 @@ func (c *Client) Stop() {
 	c.client.Stop()
 }
 
-func NewElasticSearchClient(c *Config) (*Client, error) {
+func New(c *Config) (*Client, error) {
 	client := &Client{
 		config: c,
 	}

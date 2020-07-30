@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/Shopify/sarama"
 	cluster "github.com/bsm/sarama-cluster"
-	"github.com/opay-o2o/golib/logger"
+	"github.com/Zivn/golib/logger"
 	"sync"
 )
 

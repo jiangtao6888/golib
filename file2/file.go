@@ -29,7 +29,7 @@ func Write(filename string, content []byte, append bool) error {
 			return err
 		}
 
-		defer fd.Close()
+		defer func() { _ = fd.Close() }()
 
 		n, err := fd.Write(content)
 

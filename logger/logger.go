@@ -1,26 +1,23 @@
 package logger
 
 import (
-	"bufio"
-	"bytes"
 	"fmt"
-	"github.com/opay-o2o/golib/net2"
 	"os"
+	"github.com/Zivn/golib/net2"
 	"path"
 	"runtime"
 	"strings"
-	"sync"
 	"time"
 )
 
 type Config struct {
-	Dir        string `toml:"dir"`
-	Prefix     string `toml:"prefix"`
-	Level      string `toml:"level"`
-	Color      bool   `toml:"color"`
-	Terminal   bool   `toml:"terminal"`
-	ShowIp     bool   `toml:"show_ip"`
-	TimeFormat string `toml:"time_format"`
+	Dir        string `toml:"dir" json:"dir"`
+	Prefix     string `toml:"prefix" json:"prefix"`
+	Level      string `toml:"level" json:"level"`
+	Color      bool   `toml:"color" json:"color"`
+	Terminal   bool   `toml:"terminal" json:"terminal"`
+	ShowIp     bool   `toml:"show_ip" json:"show_ip"`
+	TimeFormat string `toml:"time_format" json:"time_format"`
 }
 
 func DefaultConfig() *Config {
@@ -35,138 +32,40 @@ func DefaultConfig() *Config {
 }
 
 type Logger struct {
-	c        *Config
-	level    Level
-	file     string
-	ip       string
-	f        *os.File
-	w        *bufio.Writer
-	bytePool *sync.Pool
-	ch       chan interface{}
-	timer    *time.Ticker
-	end      chan bool
-}
-
-type msg struct {
-	file   string
-	line   int
+	conf   *Config
+	writer *asyncWriter
 	level  Level
-	format string
-	args   []interface{}
+	ip     string
 }
 
-func NewLogger(c *Config) (*Logger, error) {
-	l := &Logger{
-		c:        c,
-		level:    GetLevel(c.Level),
-		bytePool: &sync.Pool{New: func() interface{} { return new(bytes.Buffer) }},
-		ch:       make(chan interface{}, 8192),
-		timer:    time.NewTicker(time.Second),
-		end:      make(chan bool, 1),
+func NewLogger(conf *Config) (l *Logger, err error) {
+	l = &Logger{conf: conf, level: GetLevel(conf.Level)}
+
+	if l.ip, err = net2.GetLocalIp(); err != nil {
+		return
 	}
 
-	err := os.MkdirAll(l.c.Dir, 0755)
-
-	if err != nil {
-		return nil, err
-	}
-
-	l.ip, err = net2.GetLocalIp()
-
-	if err != nil {
-		return nil, err
-	}
-
-	l.refresh()
-	l.f, err = os.OpenFile(l.file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-
-	if err != nil {
-		return nil, err
-	}
-
-	l.w = bufio.NewWriter(l.f)
-	l.run()
-
-	return l, nil
+	l.writer, err = newWriter(conf.Dir, l.getFile)
+	return
 }
 
-func (l *Logger) refresh() bool {
-	oldFile := l.file
-	l.file = path.Join(l.c.Dir, l.c.Prefix+time.Now().Format("20060102.log"))
-	return l.file != oldFile
+func (l *Logger) getFile() string {
+	return path.Join(l.conf.Dir, l.conf.Prefix+time.Now().Format("20060102.log"))
 }
 
-func (l *Logger) start() {
-	for m := range l.ch {
-		if m == nil {
-			l.w.Flush()
+func (l *Logger) prefix(level Level, file string, line int) string {
+	nowTime := time.Now().Format(l.conf.TimeFormat)
+	levelText := GetLevelText(level, l.conf.Color)
+	loc := fmt.Sprintf("<%s:%d>", file, line)
 
-			if l.refresh() {
-				l.f.Close()
-				l.f, _ = os.OpenFile(l.file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-				l.w.Reset(l.f)
-			}
-		} else if msg, ok := m.(*msg); ok {
-			l.w.Write(l.bytes(msg))
-		} else if p, ok := m.([]byte); ok {
-			l.w.Write(p)
-		}
-	}
-
-	l.end <- true
-}
-
-func (l *Logger) run() {
-	go l.flush()
-	go l.start()
-}
-
-func (l *Logger) bytes(m *msg) []byte {
-	w := l.bytePool.Get().(*bytes.Buffer)
-
-	defer func() {
-		recover()
-		w.Reset()
-		l.bytePool.Put(w)
-	}()
-
-	nowTime := time.Now().Format(l.c.TimeFormat)
-	level := GetLevelText(m.level, l.c.Color)
-	loc := fmt.Sprintf("<%s:%d>", m.file, m.line)
-
-	if l.c.Color {
+	if l.conf.Color {
 		loc = Blue(loc)
 	}
 
-	if l.c.ShowIp {
-		fmt.Fprintf(w, "%s (%s) %s %s ", level, l.ip, nowTime, loc)
+	if l.conf.ShowIp {
+		return fmt.Sprintf("%s (%s) %s %s ", levelText, l.ip, nowTime, loc)
 	} else {
-		fmt.Fprintf(w, "%s %s %s ", level, nowTime, loc)
-	}
-
-	if len(m.format) == 0 {
-		for i := 0; i < len(m.args); i++ {
-			if i > 0 {
-				w.Write([]byte{' '})
-			}
-
-			fmt.Fprint(w, m.args[i])
-		}
-	} else {
-		fmt.Fprintf(w, m.format, m.args...)
-	}
-
-	fmt.Fprintf(w, "\n")
-
-	b := make([]byte, w.Len())
-	copy(b, w.Bytes())
-
-	return b
-}
-
-func (l *Logger) flush() {
-	for range l.timer.C {
-		l.ch <- nil
+		return fmt.Sprintf("%s %s %s ", levelText, nowTime, loc)
 	}
 }
 
@@ -184,67 +83,75 @@ func (l *Logger) getFileInfo() (file string, line int) {
 	return
 }
 
-func (l *Logger) Log(level Level, format string, args ...interface{}) {
-	m := &msg{level: level, format: format, args: args}
-	m.file, m.line = l.getFileInfo()
+func (l *Logger) log(level Level, format string, args ...interface{}) {
+	file, line := l.getFileInfo()
+	prefix := l.prefix(level, file, line)
+	msg := &message{prefix: prefix, format: format, args: args}
 
-	if l.c.Terminal {
-		fmt.Fprint(os.Stdout, string(l.bytes(m)))
+	if l.conf.Terminal {
+		_, _ = fmt.Fprint(os.Stdout, string(l.writer.bytes(msg)))
 	} else {
-		if level <= l.level {
-			l.ch <- m
-		}
+		l.writer.write(msg)
 	}
 }
 
 func (l *Logger) Write(p []byte) (n int, err error) {
-	l.ch <- p
-	return len(p), nil
+	msg := &message{args: []interface{}{string(p)}, ignoreLF: true}
+
+	if l.conf.Terminal {
+		n, err = fmt.Fprint(os.Stdout, string(l.writer.bytes(msg)))
+	} else {
+		l.writer.write(msg)
+		n = len(p)
+	}
+
+	return
 }
 
 func (l *Logger) Debug(args ...interface{}) {
-	l.Log(DebugLevel, "", args...)
+	l.log(DebugLevel, "", args...)
 }
 
 func (l *Logger) Debugf(format string, args ...interface{}) {
-	l.Log(DebugLevel, format, args...)
+	l.log(DebugLevel, format, args...)
 }
 
 func (l *Logger) Info(args ...interface{}) {
-	l.Log(InfoLevel, "", args...)
+	l.log(InfoLevel, "", args...)
 }
 
 func (l *Logger) Infof(format string, args ...interface{}) {
-	l.Log(InfoLevel, format, args...)
+	l.log(InfoLevel, format, args...)
 }
 
 func (l *Logger) Warning(args ...interface{}) {
-	l.Log(WarnLevel, "", args...)
+	l.log(WarnLevel, "", args...)
 }
 
 func (l *Logger) Warningf(format string, args ...interface{}) {
-	l.Log(WarnLevel, format, args...)
+	l.log(WarnLevel, format, args...)
 }
 
 func (l *Logger) Error(args ...interface{}) {
-	l.Log(ErrorLevel, "", args...)
+	l.log(ErrorLevel, "", args...)
 }
 
 func (l *Logger) Errorf(format string, args ...interface{}) {
-	l.Log(ErrorLevel, format, args...)
+	l.log(ErrorLevel, format, args...)
 }
 
 func (l *Logger) Fatal(args ...interface{}) {
-	l.Log(FatalLevel, "", args...)
+	l.log(FatalLevel, "", args...)
 }
 
 func (l *Logger) Fatalf(format string, args ...interface{}) {
-	l.Log(FatalLevel, format, args...)
+	l.log(FatalLevel, format, args...)
+}
+
+func (l *Logger) Config() *Config {
+	return l.conf
 }
 
 func (l *Logger) Close() {
-	l.timer.Stop()
-	l.ch <- nil
-	close(l.ch)
-	<-l.end
+	l.writer.close()
 }

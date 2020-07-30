@@ -6,30 +6,44 @@ import (
 	"time"
 )
 
-type Config struct {
+type ConnectConfig struct {
 	Host              string        `toml:"host"`
 	Port              int           `toml:"port"`
 	Username          string        `toml:"username"`
 	Password          string        `toml:"password"`
 	QoS               byte          `toml:"qos"`
-	ClientId          string        `toml:"client_id"`
-	ReceiveSaveMsg    bool          `toml:"receive_save_msg"`
+	CleanSession      bool          `toml:"clean_session"`
 	ConnectTimeout    time.Duration `toml:"connect_timeout"`
 	DisconnectTimeout uint          `toml:"disconnect_timeout"`
 }
 
-func (c *Config) GetAddr() string {
+func (c *ConnectConfig) GetAddr() string {
 	return fmt.Sprintf("tcp://%s:%d", c.Host, c.Port)
 }
 
-func connect(c *Config) (mqtt.Client, error) {
-	options := mqtt.NewClientOptions().
+func (c *ConnectConfig) GetOptions() *mqtt.ClientOptions {
+	return mqtt.NewClientOptions().
 		AddBroker(c.GetAddr()).
 		SetUsername(c.Username).
 		SetPassword(c.Password).
-		SetClientID(c.ClientId).
-		SetCleanSession(!c.ReceiveSaveMsg).
+		SetAutoReconnect(true).
+		SetCleanSession(c.CleanSession).
 		SetConnectTimeout(c.ConnectTimeout * time.Millisecond)
+}
+
+type IConfig interface {
+	GetOptions() *mqtt.ClientOptions
+	GetClientID() string
+	ConnectHandler(mqtt.Client)
+	DisconnectHandler(mqtt.Client, error)
+}
+
+func connect(c IConfig) (mqtt.Client, error) {
+	options := c.GetOptions().
+		SetClientID(c.GetClientID()).
+		SetOnConnectHandler(c.ConnectHandler).
+		SetConnectionLostHandler(c.DisconnectHandler)
+
 	client := mqtt.NewClient(options)
 
 	if token := client.Connect(); token.Wait() && token.Error() != nil {

@@ -3,7 +3,7 @@ package scheduler
 import (
 	"context"
 	"fmt"
-	"github.com/opay-o2o/golib/logger"
+	"github.com/Zivn/golib/logger"
 	"strings"
 	"time"
 )
@@ -77,7 +77,7 @@ func (w *Worker) Run() {
 			return
 		case p := <-w.loopTimer:
 			if p.signal {
-				w.logger.Infof("[%s] run by signal file", w.provider.GetName())
+				w.logger.Infof("[%s] run by signal", w.provider.GetName())
 				w.provider.Run(p.t)
 			} else if w.provider.CheckInterval(p.t) {
 				w.provider.Run(p.t)

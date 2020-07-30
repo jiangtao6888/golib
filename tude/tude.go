@@ -16,23 +16,6 @@ type Point struct {
 	lng, lat float64
 }
 
-func NewPoint(lng, lat float64) *Point {
-	return &Point{lng, lat}
-}
-
-type TimePoint struct {
-	point     *Point
-	timestamp int64
-}
-
-func (p *TimePoint) GetPoint() *Point {
-	return p.point
-}
-
-func NewTimePoint(lng, lat float64, timestamp int64) *TimePoint {
-	return &TimePoint{&Point{lng, lat}, timestamp}
-}
-
 func Radians(x float64) float64 {
 	return x * math.Pi / 180
 }

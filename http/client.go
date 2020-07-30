@@ -3,10 +3,11 @@ package http
 import (
 	"bytes"
 	"fmt"
-	"github.com/opay-o2o/golib/strings2"
 	"io/ioutil"
 	"net/http"
 	"net/http/cookiejar"
+	"github.com/Zivn/golib/strings2"
+	"time"
 )
 
 type Client struct {
@@ -83,7 +84,7 @@ func (c *Client) DoMethod(url string, header map[string]string, body []byte, met
 	return respBody, nil
 }
 
-func NewClient() *Client {
+func NewClient(timeout time.Duration) *Client {
 	cookie, _ := cookiejar.New(nil)
-	return &Client{client: &http.Client{Jar: cookie}}
+	return &Client{client: &http.Client{Jar: cookie, Timeout: timeout}}
 }

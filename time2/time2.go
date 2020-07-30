@@ -8,6 +8,14 @@ import (
 const (
 	DateLayout     = "20060102"
 	DateTimeLayout = "2006-01-02 15:04:05"
+
+	TimeDay      = time.Hour * 24
+	TimeThreeDay = TimeDay * 3
+	TimeWeek     = TimeDay * 7
+	TimeMonth    = TimeDay * 30
+	TimeYear     = TimeDay * 365
+
+	DaySeconds = 86400
 )
 
 func Now(loc ...*time.Location) time.Time {

@@ -82,6 +82,11 @@ func B2I(v bool) int {
 	return 0
 }
 
+func Round(f float64, n int) float64 {
+	n10 := math.Pow10(n)
+	return math.Trunc(f*n10+0.5) / n10
+}
+
 func RoundInt(x float64) int {
 	return int(math.Floor(x + 0.5))
 }
@@ -182,4 +187,19 @@ func SameArray(a1 []int64, a2 []int64) bool {
 	}
 
 	return true
+}
+
+func Unique(list []int) []int {
+	result := make([]int, 0, len(list))
+	flags := make(map[int]bool, len(list))
+
+	for _, v := range list {
+		if !flags[v] {
+			result = append(result, v)
+		}
+
+		flags[v] = true
+	}
+
+	return result
 }

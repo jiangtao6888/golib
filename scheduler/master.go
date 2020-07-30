@@ -3,7 +3,7 @@ package scheduler
 import (
 	"context"
 	"fmt"
-	"github.com/opay-o2o/golib/logger"
+	"github.com/Zivn/golib/logger"
 )
 
 type Master struct {

@@ -3,11 +3,11 @@ package http
 import (
 	stdContext "context"
 	"fmt"
-	"github.com/kataras/iris"
-	"github.com/kataras/iris/context"
-	"github.com/kataras/iris/middleware/pprof"
-	"github.com/kataras/iris/websocket"
-	"github.com/opay-o2o/golib/logger"
+	"github.com/kataras/iris/v12"
+	"github.com/kataras/iris/v12/context"
+	"github.com/kataras/iris/v12/middleware/pprof"
+	"net/http"
+	"github.com/Zivn/golib/logger"
 	"runtime"
 	"strconv"
 	"strings"
@@ -15,34 +15,19 @@ import (
 	"time"
 )
 
-type WsConfig struct {
-	Enable   bool          `toml:"enable"`
-	Endpoint string        `toml:"endpoint"`
-	Library  string        `toml:"library"`
-	IdleTime time.Duration `toml:"idle_time"`
-}
-
-type LogConfig struct {
-	Level      string `toml:"level"`
-	TimeFormat string `toml:"time_format"`
-	Color      bool   `toml:"color"`
-}
-
 type TlsConfig struct {
-	Enable   bool   `toml:"enable"`
-	CertPath string `toml:"cert_path"`
-	KeyPath  string `toml:"key_path"`
+	Enable   bool   `toml:"enable" json:"enable"`
+	CertPath string `toml:"cert_path" json:"cert_path"`
+	KeyPath  string `toml:"key_path" json:"key_path"`
 }
 
 type Config struct {
-	Host      string     `toml:"host"`
-	Port      int        `toml:"port"`
-	Charset   string     `toml:"charset"`
-	Gzip      bool       `toml:"gzip"`
-	PProf     bool       `toml:"pprof"`
-	Websocket *WsConfig  `toml:"websocket"`
-	Tls       *TlsConfig `toml:"tls"`
-	Log       *LogConfig `toml:"log"`
+	Host    string     `toml:"host" json:"host"`
+	Port    int        `toml:"port" json:"port"`
+	Charset string     `toml:"charset" json:"charset"`
+	Gzip    bool       `toml:"gzip" json:"gzip"`
+	PProf   bool       `toml:"pprof" json:"pprof"`
+	Tls     *TlsConfig `toml:"tls" json:"tls"`
 }
 
 func (c *Config) GetAddr() string {
@@ -53,16 +38,8 @@ func DefaultConfig() *Config {
 	return &Config{
 		Port:    80,
 		Charset: "UTF-8",
-		Websocket: &WsConfig{
-			Enable: false,
-		},
 		Tls: &TlsConfig{
 			Enable: false,
-		},
-		Log: &LogConfig{
-			Level:      "debug",
-			TimeFormat: "2006-01-02 15:04:05",
-			Color:      true,
 		},
 	}
 }
@@ -83,7 +60,6 @@ func GetClientIp(ctx context.Context) string {
 
 type Router interface {
 	RegHttpHandler(app *iris.Application)
-	WebsocketRouter(wsConn websocket.Connection)
 	GetIdentifier(ctx context.Context) string
 }
 
@@ -92,7 +68,6 @@ type Server struct {
 	config   *Config
 	router   Router
 	app      *iris.Application
-	ws       *websocket.Server
 	logger   *logger.Logger
 	ctx      stdContext.Context
 	canceler func()
@@ -130,7 +105,7 @@ func (s *Server) Recovery(ctx context.Context) {
 			request := fmt.Sprintf("%v %s %s %s", strconv.Itoa(ctx.GetStatusCode()), GetClientIp(ctx), ctx.Method(), ctx.Path())
 			s.logger.Error(fmt.Sprintf("recovered panic:\nRequest: %s\nTrace: %s\n%s", request, err, stacktrace))
 
-			ctx.StatusCode(500)
+			ctx.StatusCode(http.StatusInternalServerError)
 			ctx.StopExecution()
 		}
 	}()
@@ -192,10 +167,6 @@ func (s *Server) Stop() {
 	}
 }
 
-func (s *Server) GetWsConn(connId string) websocket.Connection {
-	return s.ws.GetConnection(connId)
-}
-
 func NewServer(c *Config, r Router, l *logger.Logger) *Server {
 	server := &Server{config: c, router: r, logger: l}
 	server.ctx, server.canceler = stdContext.WithCancel(stdContext.Background())
@@ -217,27 +188,13 @@ func NewServer(c *Config, r Router, l *logger.Logger) *Server {
 	}
 
 	// set logger
-	server.app.Logger().SetLevel(c.Log.Level)
-	server.app.Logger().SetTimeFormat(c.Log.TimeFormat)
+	server.app.Logger().SetLevel(l.Config().Level)
+	server.app.Logger().SetTimeFormat(l.Config().TimeFormat)
 	server.app.Logger().SetOutput(l)
-	server.app.Logger().Printer.IsTerminal = c.Log.Color
+	server.app.Logger().Printer.IsTerminal = l.Config().Color
 
 	// set route
 	server.router.RegHttpHandler(server.app)
-
-	// set websocket
-	if c.Websocket.Enable {
-		server.ws = websocket.New(websocket.Config{
-			ReadBufferSize:  1024,
-			WriteBufferSize: 1024,
-			ReadTimeout:     c.Websocket.IdleTime * time.Second,
-		})
-
-		server.ws.OnConnection(server.router.WebsocketRouter)
-
-		server.app.Get(c.Websocket.Endpoint, server.ws.Handler())
-		server.app.Any(c.Websocket.Library, websocket.ClientHandler())
-	}
 
 	return server
 }

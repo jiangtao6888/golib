@@ -22,7 +22,7 @@ type Cache struct {
 	timer *time.Ticker
 }
 
-func NewCache() *Cache {
+func New() *Cache {
 	c := &Cache{
 		items: make(map[string]*Item, initSize),
 		timer: time.NewTicker(interval * time.Second),

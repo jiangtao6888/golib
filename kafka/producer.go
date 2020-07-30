@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/Shopify/sarama"
-	"github.com/opay-o2o/golib/logger"
+	"github.com/Zivn/golib/logger"
 	"sync"
 	"time"
 )

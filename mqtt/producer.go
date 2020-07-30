@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/opay-o2o/golib/logger"
+	"github.com/Zivn/golib/logger"
 	"sync"
 	"time"
 )
@@ -21,10 +21,10 @@ func (m *Message) String() string {
 }
 
 type ProducerConfig struct {
-	*Config
-	Timeout         time.Duration `toml:"timeout"`
-	RetryInterval   time.Duration `toml:"retry_interval"`
-	ReconnectOnFail int           `toml:"reconnect_on_fail"`
+	*ConnectConfig
+	ClientId      string        `toml:"client_id"`
+	Timeout       time.Duration `toml:"timeout"`
+	RetryInterval time.Duration `toml:"retry_interval"`
 }
 
 type Producer struct {
@@ -37,8 +37,24 @@ type Producer struct {
 	wg       *sync.WaitGroup
 }
 
+func (c *Producer) GetOptions() *mqtt.ClientOptions {
+	return c.c.GetOptions()
+}
+
+func (c *Producer) GetClientID() string {
+	return c.c.ClientId
+}
+
+func (c *Producer) ConnectHandler(_ mqtt.Client) {
+	c.logger.Debugf("mqtt connected | addr: %s", c.c.ConnectConfig.GetAddr())
+}
+
+func (c *Producer) DisconnectHandler(_ mqtt.Client, err error) {
+	c.logger.Debugf("mqtt lost connection | addr: %s | error: %s", c.c.ConnectConfig.GetAddr(), err)
+}
+
 func (c *Producer) run() (err error) {
-	if c.client, err = connect(c.c.Config); err != nil {
+	if c.client, err = connect(c); err != nil {
 		return
 	}
 
@@ -64,28 +80,13 @@ func (c *Producer) Send(topic string, retained bool, payload []byte) error {
 	}
 }
 
-func (c *Producer) retry(msg *Message, times *int) {
+func (c *Producer) retry(msg *Message) {
 	c.msgQueue <- msg
-	*times++
-
 	time.Sleep(c.c.RetryInterval * time.Millisecond)
-
-	if *times >= c.c.ReconnectOnFail {
-		client, err := connect(c.c.Config)
-
-		if err != nil {
-			c.logger.Errorf("can't connect to server | addr: %s | error: %s", c.c.GetAddr(), err)
-			return
-		}
-
-		c.client, *times = client, 0
-	}
 }
 
 func (c *Producer) publish() {
 	defer c.wg.Done()
-
-	retryTimes := 0
 
 	for {
 		select {
@@ -96,13 +97,13 @@ func (c *Producer) publish() {
 
 			if ok := token.WaitTimeout(c.c.Timeout * time.Millisecond); !ok {
 				c.logger.Errorf("publish message timeout | addr: %s | message: %s", c.c.GetAddr(), msg)
-				c.retry(msg, &retryTimes)
+				c.retry(msg)
 				continue
 			}
 
 			if err := token.Error(); err != nil {
 				c.logger.Errorf("can't publish message | addr: %s | message: %s | error: %s", c.c.GetAddr(), msg, err)
-				c.retry(msg, &retryTimes)
+				c.retry(msg)
 				continue
 			}
 
