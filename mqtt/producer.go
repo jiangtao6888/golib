@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/Zivn/golib/logger"
+	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"sync"
 	"time"
 )
@@ -22,9 +22,9 @@ func (m *Message) String() string {
 
 type ProducerConfig struct {
 	*ConnectConfig
-	ClientId      string        `toml:"client_id"`
-	Timeout       time.Duration `toml:"timeout"`
-	RetryInterval time.Duration `toml:"retry_interval"`
+	ClientId      string        `toml:"client_id" json:"client_id"`
+	Timeout       time.Duration `toml:"timeout" json:"timeout"`
+	RetryInterval time.Duration `toml:"retry_interval" json:"retry_interval"`
 }
 
 type Producer struct {

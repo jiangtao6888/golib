@@ -2,8 +2,8 @@ package logger
 
 import (
 	"fmt"
-	"os"
 	"github.com/Zivn/golib/net2"
+	"os"
 	"path"
 	"runtime"
 	"strings"

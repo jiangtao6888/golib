@@ -2,17 +2,17 @@ package mqtt
 
 import (
 	"context"
-	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/Zivn/golib/logger"
+	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"sync"
 	"time"
 )
 
 type ConsumerConfig struct {
 	*ConnectConfig
-	ClientId string        `toml:"client_id"`
-	Timeout  time.Duration `toml:"timeout"`
-	Worker   int           `toml:"worker"`
+	ClientId string        `toml:"client_id" json:"client_id"`
+	Timeout  time.Duration `toml:"timeout" json:"timeout"`
+	Worker   int           `toml:"worker" json:"worker"`
 }
 
 type Consumer struct {

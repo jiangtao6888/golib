@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/kr/beanstalk"
 	"github.com/Zivn/golib/logger"
+	"github.com/kr/beanstalk"
 	"sync"
 	"time"
 )

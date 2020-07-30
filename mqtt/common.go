@@ -7,14 +7,14 @@ import (
 )
 
 type ConnectConfig struct {
-	Host              string        `toml:"host"`
-	Port              int           `toml:"port"`
-	Username          string        `toml:"username"`
-	Password          string        `toml:"password"`
-	QoS               byte          `toml:"qos"`
-	CleanSession      bool          `toml:"clean_session"`
-	ConnectTimeout    time.Duration `toml:"connect_timeout"`
-	DisconnectTimeout uint          `toml:"disconnect_timeout"`
+	Host              string        `toml:"host" json:"host"`
+	Port              int           `toml:"port" json:"port"`
+	Username          string        `toml:"username" json:"username"`
+	Password          string        `toml:"password" json:"password"`
+	QoS               byte          `toml:"qos" json:"qos"`
+	CleanSession      bool          `toml:"clean_session" json:"clean_session"`
+	ConnectTimeout    time.Duration `toml:"connect_timeout" json:"connect_timeout"`
+	DisconnectTimeout uint          `toml:"disconnect_timeout" json:"disconnect_timeout"`
 }
 
 func (c *ConnectConfig) GetAddr() string {

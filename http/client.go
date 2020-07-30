@@ -3,10 +3,10 @@ package http
 import (
 	"bytes"
 	"fmt"
+	"github.com/Zivn/golib/strings2"
 	"io/ioutil"
 	"net/http"
 	"net/http/cookiejar"
-	"github.com/Zivn/golib/strings2"
 	"time"
 )
 

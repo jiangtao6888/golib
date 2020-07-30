@@ -3,17 +3,17 @@ package kafka
 import (
 	"context"
 	"github.com/Shopify/sarama"
-	cluster "github.com/bsm/sarama-cluster"
 	"github.com/Zivn/golib/logger"
+	cluster "github.com/bsm/sarama-cluster"
 	"sync"
 )
 
 type ConsumerConfig struct {
-	Brokers      []string `toml:"brokers"`
-	Topic        string   `toml:"topic"`
-	Group        string   `toml:"group"`
-	Worker       int      `toml:"worker"`
-	OffsetNewest bool     `toml:"offset_newest"`
+	Brokers      []string `toml:"brokers" json:"brokers"`
+	Topic        string   `toml:"topic" json:"topic"`
+	Group        string   `toml:"group" json:"group"`
+	Worker       int      `toml:"worker" json:"worker"`
+	OffsetNewest bool     `toml:"offset_newest" json:"offset_newest"`
 }
 
 type Consumer struct {

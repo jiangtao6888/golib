@@ -10,7 +10,7 @@ type Node struct {
 	end      bool
 }
 
-func NewFilter(mask rune) *Filter {
+func New(mask rune) *Filter {
 	return &Filter{mask: mask, root: &Node{children: make(map[rune]*Node)}}
 }
 

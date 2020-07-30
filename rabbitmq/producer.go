@@ -3,8 +3,8 @@ package rabbitmq
 import (
 	"context"
 	"errors"
-	"github.com/streadway/amqp"
 	"github.com/Zivn/golib/logger"
+	"github.com/streadway/amqp"
 	"sync"
 	"time"
 )

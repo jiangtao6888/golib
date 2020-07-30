@@ -6,7 +6,7 @@ import (
 )
 
 type Config struct {
-	Addrs []string `toml:"addrs"`
+	Addrs []string `toml:"addrs" json:"addrs"`
 }
 
 type Client struct {

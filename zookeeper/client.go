@@ -2,8 +2,8 @@ package zookeeper
 
 import (
 	"context"
-	"github.com/samuel/go-zookeeper/zk"
 	"github.com/Zivn/golib/logger"
+	"github.com/samuel/go-zookeeper/zk"
 	"strings"
 	"sync"
 	"time"

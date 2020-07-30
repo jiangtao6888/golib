@@ -15,4 +15,3 @@ type ConnectConfig struct {
 func (c *ConnectConfig) Addr() string {
 	return fmt.Sprintf("amqp://%s:%s@%s:%d/%s", c.Username, c.Password, c.Host, c.Port, c.Vhost)
 }
-
