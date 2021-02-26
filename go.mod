@@ -6,15 +6,11 @@ require (
 	github.com/Shopify/sarama v1.28.0
 	github.com/ajg/form v1.5.1 // indirect
 	github.com/aliyun/aliyun-oss-go-sdk v2.1.6+incompatible
-	github.com/aliyunmq/mq-http-go-sdk v0.0.0-20210105060048-14c71bbb1a3a
 	github.com/baiyubin/aliyun-sts-go-sdk v0.0.0-20180326062324-cfa1a18b161f // indirect
 	github.com/bsm/sarama-cluster v2.1.15+incompatible
 	github.com/eclipse/paho.mqtt.golang v1.3.2
-	github.com/facebookgo/stack v0.0.0-20160209184415-751773369052 // indirect
 	github.com/fasthttp-contrib/websocket v0.0.0-20160511215533-1f3b11f56072 // indirect
 	github.com/go-redis/redis v6.15.9+incompatible
-	github.com/gogap/errors v0.0.0-20200228125012-531a6449b28c
-	github.com/gogap/stack v0.0.0-20150131034635-fef68dddd4f8 // indirect
 	github.com/gogo/protobuf v1.3.2
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/google/uuid v1.2.0
