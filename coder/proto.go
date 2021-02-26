@@ -3,8 +3,13 @@ package coder
 import (
 	"errors"
 
+	"github.com/gin-gonic/gin"
 	"github.com/gogo/protobuf/proto"
-	"github.com/kataras/iris/v12/context"
+)
+
+const (
+	EncodingProtobuf    = "protobuf"
+	ContentTypeProtobuf = "application/octet-stream"
 )
 
 var ProtoCoder = &protoCoder{}
@@ -31,20 +36,26 @@ func (c *protoCoder) Marshal(v interface{}) ([]byte, error) {
 	return proto.Marshal(pb)
 }
 
-func (c *protoCoder) DecodeIrisReq(ctx context.Context, v interface{}) error {
-	return ctx.UnmarshalBody(v, c)
+func (c *protoCoder) DecodeRequest(ctx *gin.Context, v interface{}) (err error) {
+	data, err := GetBody(ctx)
+
+	if err != nil {
+		return
+	}
+
+	return c.Unmarshal(data, v)
 }
 
-func (c *protoCoder) SendIrisReply(ctx context.Context, v interface{}) error {
-	ctx.ContentType(context.ContentBinaryHeaderValue)
+func (c *protoCoder) SendResponse(ctx *gin.Context, v interface{}) (err error) {
 	ctx.Header(EncodingHeader, EncodingProtobuf)
+	ctx.Header(ContentTypeHeader, ContentTypeProtobuf)
 
 	data, err := c.Marshal(v)
 
 	if err != nil {
-		return err
+		return
 	}
 
-	_, err = ctx.Write(data)
-	return err
+	_, err = ctx.Writer.Write(data)
+	return
 }

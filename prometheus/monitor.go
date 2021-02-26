@@ -1,7 +1,7 @@
 package prometheus
 
 import (
-	stdCtx "context"
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -10,8 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kataras/iris/v12"
-	"github.com/kataras/iris/v12/context"
+	"github.com/gin-gonic/gin"
 	"github.com/marsmay/golib/logger"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -75,19 +74,18 @@ func (v *Vector) Trigger(value float64, labels ...string) {
 }
 
 // NOTE: vector type must is Histogram or Summary
-func (v *Vector) HttpInterceptor(ctx context.Context) {
+func (v *Vector) HttpInterceptor(ctx *gin.Context) {
 	start := time.Now()
 	ctx.Next()
 
-	r := ctx.Request()
-	statusCode := strconv.Itoa(ctx.GetStatusCode())
+	statusCode := strconv.Itoa(ctx.Writer.Status())
 	duration := float64(time.Since(start).Nanoseconds()) / 1000000000
-	labels := []string{statusCode, r.Method, r.URL.Path}
+	labels := []string{statusCode, ctx.Request.Method, ctx.Request.URL.Path}
 
 	v.Trigger(duration, labels...)
 }
 
-func getClietIP(ctx stdCtx.Context) (ip string, err error) {
+func getClietIP(ctx context.Context) (ip string, err error) {
 	pr, ok := peer.FromContext(ctx)
 
 	if !ok {
@@ -105,7 +103,7 @@ func getClietIP(ctx stdCtx.Context) (ip string, err error) {
 }
 
 // NOTE: vector type must is Histogram or Summary
-func (v *Vector) GrpcServerUnaryInterceptor(ctx stdCtx.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
+func (v *Vector) GrpcServerUnaryInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
 	defer v.catchPanic()
 
 	start := time.Now()
@@ -143,7 +141,7 @@ func (v *Vector) GrpcServerStreamInterceptor(srv interface{}, stream grpc.Server
 }
 
 // NOTE: vector type must is Histogram or Summary
-func (v *Vector) GrpcClientUnaryInterceptor(ctx stdCtx.Context, method string, req, resp interface{}, conn *grpc.ClientConn, invoker grpc.UnaryInvoker, options ...grpc.CallOption) (err error) {
+func (v *Vector) GrpcClientUnaryInterceptor(ctx context.Context, method string, req, resp interface{}, conn *grpc.ClientConn, invoker grpc.UnaryInvoker, options ...grpc.CallOption) (err error) {
 	defer v.catchPanic()
 
 	start := time.Now()
@@ -156,7 +154,7 @@ func (v *Vector) GrpcClientUnaryInterceptor(ctx stdCtx.Context, method string, r
 }
 
 // NOTE: vector type must is Histogram or Summary
-func (v *Vector) GrpcClientStreamInterceptor(ctx stdCtx.Context, desc *grpc.StreamDesc, conn *grpc.ClientConn, method string, streamer grpc.Streamer, options ...grpc.CallOption) (stream grpc.ClientStream, err error) {
+func (v *Vector) GrpcClientStreamInterceptor(ctx context.Context, desc *grpc.StreamDesc, conn *grpc.ClientConn, method string, streamer grpc.Streamer, options ...grpc.CallOption) (stream grpc.ClientStream, err error) {
 	defer v.catchPanic()
 
 	start := time.Now()
@@ -258,8 +256,12 @@ func (m *Monitor) Vector(name string) (vector *Vector) {
 	return
 }
 
-func (m *Monitor) Metrics() context.Handler {
-	return iris.FromStd(promhttp.Handler())
+func (m *Monitor) Metrics() gin.HandlerFunc {
+	h := promhttp.Handler()
+
+	return func(c *gin.Context) {
+		h.ServeHTTP(c.Writer, c.Request)
+	}
 }
 
 func New(config *Config, logger *logger.Logger) (monitor *Monitor, err error) {

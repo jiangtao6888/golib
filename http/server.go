@@ -1,18 +1,17 @@
 package http
 
 import (
-	stdContext "context"
+	"context"
 	"fmt"
 	"net/http"
 	"runtime"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
-	"github.com/kataras/iris/v12"
-	"github.com/kataras/iris/v12/context"
-	"github.com/kataras/iris/v12/middleware/pprof"
+	"github.com/gin-contrib/pprof"
+	"github.com/gin-gonic/contrib/gzip"
+	"github.com/gin-gonic/gin"
 	"github.com/marsmay/golib/logger"
 )
 
@@ -45,32 +44,18 @@ func DefaultConfig() *Config {
 	}
 }
 
-func GetClientIp(ctx context.Context) string {
-	xForwarded := ctx.GetHeader("X-Forwarded-For")
-
-	if ip := strings.TrimSpace(strings.Split(xForwarded, ",")[0]); ip != "" {
-		return ip
-	}
-
-	if xReal := strings.TrimSpace(ctx.GetHeader("X-Real-Ip")); xReal != "" {
-		return xReal
-	}
-
-	return ctx.RemoteAddr()
-}
-
 type Router interface {
-	RegHttpHandler(app *iris.Application)
-	GetIdentifier(ctx context.Context) string
+	RegHttpHandler(app *gin.Engine)
+	GetIdentifier(ctx *gin.Context) string
 }
 
 type Server struct {
 	sync.Mutex
 	config   *Config
 	router   Router
-	app      *iris.Application
+	server   *http.Server
 	logger   *logger.Logger
-	ctx      stdContext.Context
+	ctx      context.Context
 	canceler func()
 }
 
@@ -84,10 +69,10 @@ func (s *Server) Running() bool {
 }
 
 // recovery panic (500)
-func (s *Server) Recovery(ctx context.Context) {
+func (s *Server) Recovery(ctx *gin.Context) {
 	defer func() {
 		if err := recover(); err != nil {
-			if ctx.IsStopped() {
+			if ctx.IsAborted() {
 				return
 			}
 
@@ -103,11 +88,11 @@ func (s *Server) Recovery(ctx context.Context) {
 				stacktrace += fmt.Sprintf("%s:%d\n", f, l)
 			}
 
-			request := fmt.Sprintf("%v %s %s %s", strconv.Itoa(ctx.GetStatusCode()), GetClientIp(ctx), ctx.Method(), ctx.Path())
+			request := fmt.Sprintf("%v %s %s %s", strconv.Itoa(ctx.Writer.Status()), ctx.ClientIP(), ctx.Request.Method, ctx.Request.URL.Path)
 			s.logger.Error(fmt.Sprintf("recovered panic:\nRequest: %s\nTrace: %s\n%s", request, err, stacktrace))
 
-			ctx.StatusCode(http.StatusInternalServerError)
-			ctx.StopExecution()
+			ctx.Status(http.StatusInternalServerError)
+			ctx.Abort()
 		}
 	}()
 
@@ -115,44 +100,32 @@ func (s *Server) Recovery(ctx context.Context) {
 }
 
 // record access log
-func (s *Server) AccessLog(ctx context.Context) {
+func (s *Server) AccessLog(ctx *gin.Context) {
 	start := time.Now()
 	ctx.Next()
 
 	idf := s.router.GetIdentifier(ctx)
-	statusCode, useTime, clientIp := ctx.GetStatusCode(), time.Since(start), GetClientIp(ctx)
-	uri, method, userAgent := ctx.Request().URL.RequestURI(), ctx.Method(), ctx.GetHeader("User-Agent")
+	statusCode, useTime, clientIp := ctx.Writer.Status(), time.Since(start), ctx.ClientIP()
+	uri, method, userAgent := ctx.Request.URL.RequestURI(), ctx.Request.Method, ctx.Request.UserAgent()
 	s.logger.Infof("request: %d | %4v | %s | %s %s | %s | %s", statusCode, useTime, clientIp, method, uri, userAgent, idf)
 }
 
-func CrossDomain(ctx context.Context) {
+func CrossDomain(ctx *gin.Context) {
 	ctx.Header("Access-Control-Allow-Origin", "*")
-	ctx.Next()
-}
-
-func UnGzip(ctx context.Context) {
-	ctx.Gzip(false)
 	ctx.Next()
 }
 
 func (s *Server) Start() {
 	go func() {
-		var runner iris.Runner
+		var err error
 
 		if s.config.Tls.Enable {
-			runner = iris.TLS(s.config.GetAddr(), s.config.Tls.CertPath, s.config.Tls.KeyPath)
+			err = s.server.ListenAndServeTLS(s.config.Tls.CertPath, s.config.Tls.KeyPath)
 		} else {
-			runner = iris.Addr(s.config.GetAddr())
+			err = s.server.ListenAndServe()
 		}
 
-		err := s.app.Run(runner, iris.WithConfiguration(iris.Configuration{
-			DisableStartupLog:                 true,
-			DisableInterruptHandler:           true,
-			DisableBodyConsumptionOnUnmarshal: true,
-			Charset:                           s.config.Charset,
-		}))
-
-		if err != nil && s.Running() {
+		if err != nil && err != http.ErrServerClosed && s.Running() {
 			s.logger.Errorf("can't serve at <%s> | error: %s", s.config.GetAddr(), err)
 		}
 	}()
@@ -161,42 +134,46 @@ func (s *Server) Start() {
 func (s *Server) Stop() {
 	s.canceler()
 
-	ctx, canceler := stdContext.WithTimeout(stdContext.Background(), 3*time.Second)
+	ctx, canceler := context.WithTimeout(context.Background(), 3*time.Second)
 	defer canceler()
 
-	if err := s.app.Shutdown(ctx); err != nil {
+	if err := s.server.Shutdown(ctx); err != nil {
 		s.logger.Errorf("server shutdown error: %s", err)
 	}
 }
 
 func NewServer(c *Config, r Router, l *logger.Logger) *Server {
 	server := &Server{config: c, router: r, logger: l}
-	server.ctx, server.canceler = stdContext.WithCancel(stdContext.Background())
+	server.ctx, server.canceler = context.WithCancel(context.Background())
 
-	// create iris instance
-	server.app = iris.New()
-	server.app.Use(server.Recovery)
-	server.app.Use(server.AccessLog)
+	// set gin
+	gin.SetMode(gin.ReleaseMode)
+	gin.DefaultWriter = l
+	gin.DefaultErrorWriter = l
+
+	// create gin instance
+	router := gin.New()
+	router.Use(server.Recovery)
+	router.Use(server.AccessLog)
 
 	// enable gzip
 	if c.Gzip {
-		server.app.Use(iris.Gzip)
+		router.Use(gzip.Gzip(gzip.DefaultCompression))
 	}
 
 	// enable pprof
 	if c.PProf {
-		server.app.Any("/debug/pprof", pprof.New())
-		server.app.Any("/debug/pprof/{action:path}", pprof.New())
+		pprof.Register(router)
 	}
 
-	// set logger
-	server.app.Logger().SetLevel(l.Config().Level)
-	server.app.Logger().SetTimeFormat(l.Config().TimeFormat)
-	server.app.Logger().SetOutput(l)
-	server.app.Logger().Printer.IsTerminal = l.Config().Color
-
 	// set route
-	server.router.RegHttpHandler(server.app)
+	server.router.RegHttpHandler(router)
+
+	// set server
+	server.server = &http.Server{
+		Addr:    c.GetAddr(),
+		Handler: router,
+	}
 
 	return server
 }

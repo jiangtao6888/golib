@@ -4,13 +4,36 @@ import (
 	"bytes"
 	"encoding/json"
 
-	"github.com/kataras/iris/v12/context"
+	"github.com/gin-gonic/gin"
 )
 
-var JsonCoder = &jsonCoder{escapeHTML: true}
+const (
+	EncodingJson    = "json"
+	ContentTypeJSON = "application/json; charset=utf-8"
+)
+
+var JsonCoder = &jsonCoder{EscapeHTML: true, UseNumber: true}
 
 type jsonCoder struct {
-	escapeHTML bool
+	EscapeHTML bool
+	UseNumber  bool
+}
+
+func (c *jsonCoder) Marshal(v interface{}) (data []byte, err error) {
+	if c.EscapeHTML {
+		return json.Marshal(v)
+	}
+
+	bf := bytes.NewBuffer([]byte{})
+	jsonEncoder := json.NewEncoder(bf)
+	jsonEncoder.SetEscapeHTML(c.EscapeHTML)
+
+	if err = jsonEncoder.Encode(v); err != nil {
+		return
+	}
+
+	data = bf.Bytes()
+	return
 }
 
 func (c *jsonCoder) Unmarshal(data []byte, v interface{}) error {
@@ -19,32 +42,26 @@ func (c *jsonCoder) Unmarshal(data []byte, v interface{}) error {
 	return decoder.Decode(v)
 }
 
-func (c *jsonCoder) Marshal(v interface{}) ([]byte, error) {
-	if c.escapeHTML {
-		return json.Marshal(v)
+func (c *jsonCoder) DecodeRequest(ctx *gin.Context, v interface{}) (err error) {
+	data, err := GetBody(ctx)
+
+	if err != nil {
+		return
 	}
 
-	bf := bytes.NewBuffer([]byte{})
-	jsonEncoder := json.NewEncoder(bf)
-	jsonEncoder.SetEscapeHTML(c.escapeHTML)
-
-	if err := jsonEncoder.Encode(v); err != nil {
-		return nil, err
-	}
-
-	return bf.Bytes(), nil
+	return c.Unmarshal(data, v)
 }
 
-func (c *jsonCoder) DecodeIrisReq(ctx context.Context, v interface{}) error {
-	return ctx.UnmarshalBody(v, c)
-}
-
-func (c *jsonCoder) SendIrisReply(ctx context.Context, v interface{}) error {
-	option := context.JSON{UnescapeHTML: !c.escapeHTML}
-
-	ctx.ContentType(context.ContentJSONHeaderValue)
+func (c *jsonCoder) SendResponse(ctx *gin.Context, v interface{}) (err error) {
 	ctx.Header(EncodingHeader, EncodingJson)
+	ctx.Header(ContentTypeHeader, ContentTypeJSON)
 
-	_, err := ctx.JSON(v, option)
-	return err
+	data, err := c.Marshal(v)
+
+	if err != nil {
+		return
+	}
+
+	_, err = ctx.Writer.Write(data)
+	return
 }
