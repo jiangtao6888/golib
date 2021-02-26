@@ -9,7 +9,7 @@ import (
 
 const (
 	EncodingProtobuf    = "protobuf"
-	ContentTypeProtobuf = "application/octet-stream"
+	ContentTypeProtobuf = "application/x-protobuf"
 )
 
 var ProtoCoder = &protoCoder{}
