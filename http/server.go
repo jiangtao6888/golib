@@ -115,6 +115,11 @@ func CrossDomain(ctx *gin.Context) {
 	ctx.Next()
 }
 
+func UnGzip(ctx *gin.Context) {
+	ctx.Request.Header.Del("Accept-Encoding")
+	ctx.Next()
+}
+
 func (s *Server) Start() {
 	go func() {
 		var err error
