@@ -26,6 +26,11 @@ func Select(n, m string) string {
 	return IIf(n != "", n, m)
 }
 
+func IsNum(s string) bool {
+	_, err := strconv.ParseFloat(s, 64)
+	return err == nil
+}
+
 func InList(val string, list []string) (exists bool) {
 	exists = false
 
