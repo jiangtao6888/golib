@@ -1,8 +1,9 @@
 package beanstalkd
 
 import (
-	"github.com/kr/beanstalk"
 	"sync"
+
+	"github.com/kr/beanstalk"
 )
 
 type AddrList struct {

@@ -2,8 +2,9 @@ package mqtt
 
 import (
 	"fmt"
-	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"time"
+
+	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
 type ConnectConfig struct {

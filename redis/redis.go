@@ -2,9 +2,10 @@ package redis
 
 import (
 	"errors"
-	"github.com/go-redis/redis"
 	"strconv"
 	"sync"
+
+	"github.com/go-redis/redis"
 )
 
 type Config struct {

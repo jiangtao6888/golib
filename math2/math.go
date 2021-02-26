@@ -2,7 +2,7 @@ package math2
 
 import "math"
 
-func MaxInt(ns ...int) int {
+func Max(ns ...int) int {
 	m := ns[0]
 
 	for i := 1; i < len(ns); i++ {
@@ -14,7 +14,7 @@ func MaxInt(ns ...int) int {
 	return m
 }
 
-func MinInt(ns ...int) int {
+func Min(ns ...int) int {
 	m := ns[0]
 
 	for i := 1; i < len(ns); i++ {
@@ -50,7 +50,7 @@ func MinInt64(ns ...int64) int64 {
 	return m
 }
 
-func MaxFloat64(ns ...float64) float64 {
+func MaxFloat(ns ...float64) float64 {
 	m := ns[0]
 
 	for i := 1; i < len(ns); i++ {
@@ -62,7 +62,7 @@ func MaxFloat64(ns ...float64) float64 {
 	return m
 }
 
-func MinFloat64(ns ...float64) float64 {
+func MinFloat(ns ...float64) float64 {
 	m := ns[0]
 
 	for i := 1; i < len(ns); i++ {
@@ -74,24 +74,16 @@ func MinFloat64(ns ...float64) float64 {
 	return m
 }
 
-func B2I(v bool) int {
-	if v {
-		return 1
-	}
-
-	return 0
+func Round(x float64) int {
+	return int(math.Floor(x + 0.5))
 }
 
-func Round(f float64, n int) float64 {
+func RoundFloat(f float64, n int) float64 {
 	n10 := math.Pow10(n)
 	return math.Trunc(f*n10+0.5) / n10
 }
 
-func RoundInt(x float64) int {
-	return int(math.Floor(x + 0.5))
-}
-
-func Ceil(n, m int64) int64 {
+func Ceil(n, m int) int {
 	v := n / m
 
 	if v*m < n {
@@ -101,7 +93,7 @@ func Ceil(n, m int64) int64 {
 	return v
 }
 
-func CeilInt(n, m int) int {
+func CeilInt64(n, m int64) int64 {
 	v := n / m
 
 	if v*m < n {
@@ -111,7 +103,7 @@ func CeilInt(n, m int) int {
 	return v
 }
 
-func IIfInt(b bool, n, m int) int {
+func IIf(b bool, n, m int) int {
 	if b {
 		return n
 	}
@@ -145,7 +137,7 @@ func Range(start int, end int) []int {
 	return nums
 }
 
-func InFloatArray(value float64, list []float64) bool {
+func InList(value int, list []int) bool {
 	for _, v := range list {
 		if v == value {
 			return true
@@ -155,7 +147,7 @@ func InFloatArray(value float64, list []float64) bool {
 	return false
 }
 
-func InArray(value int, list []int) bool {
+func InInt64List(value int64, list []int64) bool {
 	for _, v := range list {
 		if v == value {
 			return true
@@ -165,17 +157,17 @@ func InArray(value int, list []int) bool {
 	return false
 }
 
-func ToInt32List(list []int) []int32 {
-	ns := make([]int32, 0, len(list))
-
+func InFloatList(value float64, list []float64) bool {
 	for _, v := range list {
-		ns = append(ns, int32(v))
+		if v == value {
+			return true
+		}
 	}
 
-	return ns
+	return false
 }
 
-func SameArray(a1 []int64, a2 []int64) bool {
+func SameInt64List(a1 []int64, a2 []int64) bool {
 	if len(a1) != len(a2) {
 		return false
 	}
@@ -189,7 +181,20 @@ func SameArray(a1 []int64, a2 []int64) bool {
 	return true
 }
 
-func Unique(list []int) []int {
+func TrimInt64List(value []int64, removeList []int64) []int64 {
+	result := make([]int64, 0, len(value))
+
+	for _, v := range value {
+		if InInt64List(v, removeList) {
+			continue
+		}
+		result = append(result, v)
+	}
+
+	return result
+}
+
+func UniqueList(list []int) []int {
 	result := make([]int, 0, len(list))
 	flags := make(map[int]bool, len(list))
 
@@ -202,4 +207,43 @@ func Unique(list []int) []int {
 	}
 
 	return result
+}
+
+func UniqueInt64List(list []int64) []int64 {
+	result := make([]int64, 0, len(list))
+	flags := make(map[int64]bool, len(list))
+
+	for _, v := range list {
+		if !flags[v] {
+			result = append(result, v)
+		}
+
+		flags[v] = true
+	}
+
+	return result
+}
+
+func SumInt64List(list []int64) (sum int64) {
+	for _, v := range list {
+		sum += v
+	}
+
+	return
+}
+
+func AvgInt64List(list []int64) (avg int64) {
+	if n := len(list); n > 0 {
+		return SumInt64List(list) / int64(n)
+	}
+
+	return
+}
+
+func Percent(num, denom int64, decimal int) float64 {
+	if denom <= 0 {
+		return 0
+	}
+
+	return RoundFloat(float64(num*100)/float64(denom), decimal)
 }

@@ -3,15 +3,9 @@ package strings2
 import (
 	"fmt"
 	"math/rand"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
-)
-
-var (
-	regHtmlTag   = regexp.MustCompile("\\<[\\S\\s]+?\\>")
-	regHtmlSpace = regexp.MustCompile("\\s{2,}")
 )
 
 type Params map[string]interface{}
@@ -32,7 +26,7 @@ func Select(n, m string) string {
 	return IIf(n != "", n, m)
 }
 
-func InArray(val string, list []string) (exists bool) {
+func InList(val string, list []string) (exists bool) {
 	exists = false
 
 	for _, v := range list {
@@ -45,7 +39,7 @@ func InArray(val string, list []string) (exists bool) {
 	return
 }
 
-func ToNsArray(s, separator string) []string {
+func ToList(s, separator string) []string {
 	items := strings.Split(s, separator)
 	numbers := make([]string, 0, len(items))
 
@@ -58,7 +52,20 @@ func ToNsArray(s, separator string) []string {
 	return numbers
 }
 
-func ToIntArray(s, separator string) []int {
+func ToInt64List(s, separator string) []int64 {
+	items := strings.Split(s, separator)
+	numbers := make([]int64, 0, len(items))
+
+	for _, v := range items {
+		if n, e := strconv.ParseInt(v, 10, 64); e == nil {
+			numbers = append(numbers, n)
+		}
+	}
+
+	return numbers
+}
+
+func ToIntList(s, separator string) []int {
 	items := strings.Split(s, separator)
 	numbers := make([]int, 0, len(items))
 
@@ -71,7 +78,7 @@ func ToIntArray(s, separator string) []int {
 	return numbers
 }
 
-func FromIntArray(nums []int, separator string) string {
+func FromIntList(nums []int, separator string) string {
 	items := make([]string, 0, len(nums))
 
 	for _, v := range nums {
@@ -81,7 +88,17 @@ func FromIntArray(nums []int, separator string) string {
 	return strings.Join(items, separator)
 }
 
-func Unique(list []string) []string {
+func FromInt64List(nums []int64, separator string) string {
+	items := make([]string, 0, len(nums))
+
+	for _, v := range nums {
+		items = append(items, strconv.FormatInt(v, 10))
+	}
+
+	return strings.Join(items, separator)
+}
+
+func UniqueList(list []string) []string {
 	result := make([]string, 0, len(list))
 	flags := make(map[string]bool, len(list))
 
@@ -116,6 +133,16 @@ func SetToList(set map[string]bool) []string {
 	return list
 }
 
+func HasPrefixs(s string, prefixs []string) (hit bool, prefix string) {
+	for _, v := range prefixs {
+		if strings.HasPrefix(s, v) {
+			return true, v
+		}
+	}
+
+	return
+}
+
 var letterRunes = []rune("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 func RandString(n int) string {
@@ -126,17 +153,6 @@ func RandString(n int) string {
 	}
 
 	return string(b)
-}
-
-func ShortNumStr(n int64) string {
-	m, s := int64(0), make([]rune, 0, 8)
-
-	for n > 0 {
-		n, m = n/int64(len(letterRunes)), n%int64(len(letterRunes))
-		s = append(s, letterRunes[m])
-	}
-
-	return string(s)
 }
 
 func Template(t string, params map[string]interface{}) string {
@@ -155,9 +171,12 @@ func Template(t string, params map[string]interface{}) string {
 	return strings.NewReplacer(pairs...).Replace(t)
 }
 
-func TrimHtmlTags(s string) string {
-	s = regHtmlTag.ReplaceAllString(s, "\n")
-	s = regHtmlSpace.ReplaceAllString(s, "\n")
-	s = strings.ReplaceAll(s, "&nbsp;", " ")
-	return strings.TrimSpace(s)
+func Reverse(s string) string {
+	runes := []rune(s)
+
+	for from, to := 0, len(runes)-1; from < to; from, to = from+1, to-1 {
+		runes[from], runes[to] = runes[to], runes[from]
+	}
+
+	return string(runes)
 }

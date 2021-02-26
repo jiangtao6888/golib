@@ -2,6 +2,7 @@ package coder
 
 import (
 	"errors"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/kataras/iris/v12/context"
 )

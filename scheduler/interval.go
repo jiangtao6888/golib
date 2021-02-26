@@ -103,7 +103,7 @@ type IValue struct {
 	MaxCap int
 }
 
-func NewInterval(rules string) (err error, interval *Interval) {
+func NewInterval(rules string) (interval *Interval, err error) {
 	items := strings.Split(strings.TrimSpace(rules), " ")
 
 	if len(items) != 5 {

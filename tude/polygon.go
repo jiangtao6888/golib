@@ -21,11 +21,7 @@ func (p *Polygon) Add(point *Point) {
 }
 
 func (p *Polygon) IsClosed() bool {
-	if len(p.points) < 3 {
-		return false
-	}
-
-	return true
+	return len(p.points) >= 3
 }
 
 func (p *Polygon) Contains(point *Point) bool {

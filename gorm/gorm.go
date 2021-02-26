@@ -3,12 +3,13 @@ package gorm
 import (
 	"errors"
 	"fmt"
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/mysql"
-	"github.com/marsmay/golib/logger"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/jinzhu/gorm"
+	_ "github.com/jinzhu/gorm/dialects/mysql"
+	"github.com/marsmay/golib/logger"
 )
 
 type Config struct {

@@ -2,10 +2,11 @@ package mqtt
 
 import (
 	"context"
-	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/marsmay/golib/logger"
 	"sync"
 	"time"
+
+	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/marsmay/golib/logger"
 )
 
 type ConsumerConfig struct {

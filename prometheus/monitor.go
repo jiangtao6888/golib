@@ -4,6 +4,12 @@ import (
 	stdCtx "context"
 	"errors"
 	"fmt"
+	"net"
+	"runtime/debug"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/kataras/iris/v12"
 	"github.com/kataras/iris/v12/context"
 	"github.com/marsmay/golib/logger"
@@ -11,10 +17,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/peer"
-	"net"
-	"strconv"
-	"strings"
-	"time"
 )
 
 const (
@@ -46,6 +48,12 @@ type Vector struct {
 	config *VectorConfig
 	vec    prometheus.Collector
 	logger *logger.Logger
+}
+
+func (v *Vector) catchPanic() {
+	if err := recover(); err != nil {
+		v.logger.Fatalf("catch panic | %s\n%s", err, debug.Stack())
+	}
 }
 
 func (v *Vector) Trigger(value float64, labels ...string) {
@@ -98,6 +106,8 @@ func getClietIP(ctx stdCtx.Context) (ip string, err error) {
 
 // NOTE: vector type must is Histogram or Summary
 func (v *Vector) GrpcServerUnaryInterceptor(ctx stdCtx.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
+	defer v.catchPanic()
+
 	start := time.Now()
 	clientIp := "unknown"
 
@@ -115,6 +125,8 @@ func (v *Vector) GrpcServerUnaryInterceptor(ctx stdCtx.Context, req interface{},
 
 // NOTE: vector type must is Histogram or Summary
 func (v *Vector) GrpcServerStreamInterceptor(srv interface{}, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) (err error) {
+	defer v.catchPanic()
+
 	start := time.Now()
 	clientIp := "unknown"
 
@@ -132,6 +144,8 @@ func (v *Vector) GrpcServerStreamInterceptor(srv interface{}, stream grpc.Server
 
 // NOTE: vector type must is Histogram or Summary
 func (v *Vector) GrpcClientUnaryInterceptor(ctx stdCtx.Context, method string, req, resp interface{}, conn *grpc.ClientConn, invoker grpc.UnaryInvoker, options ...grpc.CallOption) (err error) {
+	defer v.catchPanic()
+
 	start := time.Now()
 	err = invoker(ctx, method, req, resp, conn, options...)
 	duration := float64(time.Since(start).Nanoseconds()) / 1000000000
@@ -143,6 +157,8 @@ func (v *Vector) GrpcClientUnaryInterceptor(ctx stdCtx.Context, method string, r
 
 // NOTE: vector type must is Histogram or Summary
 func (v *Vector) GrpcClientStreamInterceptor(ctx stdCtx.Context, desc *grpc.StreamDesc, conn *grpc.ClientConn, method string, streamer grpc.Streamer, options ...grpc.CallOption) (stream grpc.ClientStream, err error) {
+	defer v.catchPanic()
+
 	start := time.Now()
 	stream, err = streamer(ctx, desc, conn, method, options...)
 	duration := float64(time.Since(start).Nanoseconds()) / 1000000000

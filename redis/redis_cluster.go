@@ -2,8 +2,9 @@ package redis
 
 import (
 	"errors"
-	"github.com/go-redis/redis"
 	"sync"
+
+	"github.com/go-redis/redis"
 )
 
 const (

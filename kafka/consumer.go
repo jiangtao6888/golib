@@ -2,10 +2,12 @@ package kafka
 
 import (
 	"context"
+	"sync"
+	"time"
+
 	"github.com/Shopify/sarama"
 	cluster "github.com/bsm/sarama-cluster"
 	"github.com/marsmay/golib/logger"
-	"sync"
 )
 
 type ConsumerConfig struct {
@@ -96,13 +98,14 @@ func (c *Consumer) receive() {
 func NewConsumer(c *ConsumerConfig, handler func([]byte) error, logger *logger.Logger) (consumer *Consumer, err error) {
 	config := cluster.NewConfig()
 	config.Consumer.Return.Errors = true
-	config.Group.Return.Notifications = true
 
 	if c.OffsetNewest {
 		config.Consumer.Offsets.Initial = sarama.OffsetNewest
 	} else {
 		config.Consumer.Offsets.Initial = sarama.OffsetOldest
 	}
+
+	config.Consumer.Offsets.CommitInterval = time.Second
 
 	client, err := cluster.NewConsumer(c.Brokers, c.Group, []string{c.Topic}, config)
 

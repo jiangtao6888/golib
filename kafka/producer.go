@@ -3,10 +3,11 @@ package kafka
 import (
 	"context"
 	"errors"
-	"github.com/Shopify/sarama"
-	"github.com/marsmay/golib/logger"
 	"sync"
 	"time"
+
+	"github.com/Shopify/sarama"
+	"github.com/marsmay/golib/logger"
 )
 
 type ProducerConfig struct {

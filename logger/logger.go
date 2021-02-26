@@ -2,12 +2,13 @@ package logger
 
 import (
 	"fmt"
-	"github.com/marsmay/golib/net2"
 	"os"
 	"path"
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/marsmay/golib/net2"
 )
 
 type Config struct {
@@ -83,7 +84,7 @@ func (l *Logger) getFileInfo() (file string, line int) {
 	return
 }
 
-func (l *Logger) log(level Level, format string, args ...interface{}) {
+func (l *Logger) Log(level Level, format string, args ...interface{}) {
 	file, line := l.getFileInfo()
 	prefix := l.prefix(level, file, line)
 	msg := &message{prefix: prefix, format: format, args: args}
@@ -109,43 +110,43 @@ func (l *Logger) Write(p []byte) (n int, err error) {
 }
 
 func (l *Logger) Debug(args ...interface{}) {
-	l.log(DebugLevel, "", args...)
+	l.Log(DebugLevel, "", args...)
 }
 
 func (l *Logger) Debugf(format string, args ...interface{}) {
-	l.log(DebugLevel, format, args...)
+	l.Log(DebugLevel, format, args...)
 }
 
 func (l *Logger) Info(args ...interface{}) {
-	l.log(InfoLevel, "", args...)
+	l.Log(InfoLevel, "", args...)
 }
 
 func (l *Logger) Infof(format string, args ...interface{}) {
-	l.log(InfoLevel, format, args...)
+	l.Log(InfoLevel, format, args...)
 }
 
 func (l *Logger) Warning(args ...interface{}) {
-	l.log(WarnLevel, "", args...)
+	l.Log(WarnLevel, "", args...)
 }
 
 func (l *Logger) Warningf(format string, args ...interface{}) {
-	l.log(WarnLevel, format, args...)
+	l.Log(WarnLevel, format, args...)
 }
 
 func (l *Logger) Error(args ...interface{}) {
-	l.log(ErrorLevel, "", args...)
+	l.Log(ErrorLevel, "", args...)
 }
 
 func (l *Logger) Errorf(format string, args ...interface{}) {
-	l.log(ErrorLevel, format, args...)
+	l.Log(ErrorLevel, format, args...)
 }
 
 func (l *Logger) Fatal(args ...interface{}) {
-	l.log(FatalLevel, "", args...)
+	l.Log(FatalLevel, "", args...)
 }
 
 func (l *Logger) Fatalf(format string, args ...interface{}) {
-	l.log(FatalLevel, format, args...)
+	l.Log(FatalLevel, format, args...)
 }
 
 func (l *Logger) Config() *Config {

@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/kr/beanstalk"
-	"github.com/marsmay/golib/logger"
 	"sync"
 	"time"
+
+	"github.com/kr/beanstalk"
+	"github.com/marsmay/golib/logger"
 )
 
 type ProducerConfig struct {

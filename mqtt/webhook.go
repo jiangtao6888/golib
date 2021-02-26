@@ -25,10 +25,14 @@ type EventMessageBase struct {
 	Payload string `json:"payload"`
 }
 
-type EventClientConnected struct {
+type EventClientBase struct {
 	*EventBase
-	ClientId    string `json:"clientid"`
-	Username    string `json:"username"`
+	ClientId string `json:"clientid"`
+	Username string `json:"username"`
+}
+
+type EventClientConnected struct {
+	*EventClientBase
 	KeepAlive   int    `json:"keepalive"`
 	IpAddress   string `json:"ipaddress"`
 	ProtoVer    int    `json:"proto_ver"`
@@ -37,57 +41,41 @@ type EventClientConnected struct {
 }
 
 type EventClientDisconnected struct {
-	*EventBase
-	ClientId string `json:"clientid"`
-	Username string `json:"username"`
-	Reason   string `json:"reason"`
+	*EventClientBase
+	Reason string `json:"reason"`
+}
+
+type EventOpts struct {
+	Qos int `json:"qos"`
 }
 
 type EventClientSubscribe struct {
-	*EventBase
-	ClientId string `json:"clientid"`
-	Username string `json:"username"`
-	Topic    string `json:"topic"`
-	Opts     struct {
-		Qos int `json:"qos"`
-	} `json:"opts"`
+	*EventClientBase
+	Topic string     `json:"topic"`
+	Opts  *EventOpts `json:"opts"`
 }
 
 type EventClientUnsubscribe struct {
-	*EventBase
-	ClientId string `json:"clientid"`
-	Username string `json:"username"`
-	Topic    string `json:"topic"`
+	*EventClientBase
+	Topic string `json:"topic"`
 }
 
-type EventSessionCreated struct {
-	*EventBase
-	ClientId string `json:"clientid"`
-	Username string `json:"username"`
-}
+type EventSessionCreated EventClientBase
 
 type EventSessionSubscribe struct {
-	*EventBase
-	ClientId string `json:"clientid"`
-	Username string `json:"username"`
-	Topic    string `json:"topic"`
-	Opts     struct {
-		Qos int `json:"qos"`
-	} `json:"opts"`
+	*EventClientBase
+	Topic string     `json:"topic"`
+	Opts  *EventOpts `json:"opts"`
 }
 
 type EventSessionUnsubscribe struct {
-	*EventBase
-	ClientId string `json:"clientid"`
-	Username string `json:"username"`
-	Topic    string `json:"topic"`
+	*EventClientBase
+	Topic string `json:"topic"`
 }
 
 type EventSessionTerminated struct {
-	*EventBase
-	ClientId string `json:"clientid"`
-	Username string `json:"username"`
-	Reason   string `json:"reason"`
+	*EventClientBase
+	Reason string `json:"reason"`
 }
 
 type EventMessagePublish struct {

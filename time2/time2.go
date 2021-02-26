@@ -7,6 +7,7 @@ import (
 
 const (
 	DateLayout     = "20060102"
+	DtLayout       = "2006-01-02"
 	DateTimeLayout = "2006-01-02 15:04:05"
 
 	TimeDay      = time.Hour * 24
@@ -26,6 +27,10 @@ func Now(loc ...*time.Location) time.Time {
 	}
 
 	return time.Now().In(_loc)
+}
+
+func NowMS(loc ...*time.Location) int64 {
+	return Now(loc...).UnixNano() / 1e6
 }
 
 func TodayStart(t time.Time, loc ...*time.Location) time.Time {
@@ -55,6 +60,10 @@ func FormatD(t time.Time, loc ...*time.Location) string {
 }
 
 func FormatDt(t time.Time, loc ...*time.Location) string {
+	return Format(t, DtLayout, loc...)
+}
+
+func FormatDateTime(t time.Time, loc ...*time.Location) string {
 	return Format(t, DateTimeLayout, loc...)
 }
 

@@ -3,12 +3,13 @@ package grpc
 import (
 	"context"
 	"fmt"
-	"github.com/marsmay/golib/net2"
-	"google.golang.org/grpc/metadata"
 	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
+
+	"github.com/marsmay/golib/net2"
+	"google.golang.org/grpc/metadata"
 )
 
 var serialNumber uint64

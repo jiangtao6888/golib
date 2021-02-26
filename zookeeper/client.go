@@ -2,11 +2,12 @@ package zookeeper
 
 import (
 	"context"
-	"github.com/marsmay/golib/logger"
-	"github.com/samuel/go-zookeeper/zk"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/marsmay/golib/logger"
+	"github.com/samuel/go-zookeeper/zk"
 )
 
 const (
@@ -58,10 +59,15 @@ func (c *Client) WatchNode(path string, eventType zk.EventType, callback func(zk
 			case <-c.ctx.Done():
 				return
 			default:
-				_, _, eventCh, err := c.conn.ExistsW(path)
+				exists, _, eventCh, err := c.conn.ExistsW(path)
 
 				if err != nil {
 					c.logger.Warningf("zookeeper watch failed | path: %s | error: %s", path, err)
+					continue
+				}
+
+				if !exists {
+					callback(zk.Event{Type: zk.EventNodeDeleted, State: zk.StateUnknown, Path: path})
 					continue
 				}
 

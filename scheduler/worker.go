@@ -3,9 +3,10 @@ package scheduler
 import (
 	"context"
 	"fmt"
-	"github.com/marsmay/golib/logger"
 	"strings"
 	"time"
+
+	"github.com/marsmay/golib/logger"
 )
 
 type Point struct {
@@ -21,27 +22,23 @@ type Worker struct {
 	endSign   chan bool
 }
 
-func (w *Worker) SendSign(signal string) error {
-	select {
-	case <-w.ctx.Done():
-		return fmt.Errorf("[%s] worker is closed", w.provider.GetName())
-	default:
-		signal := strings.TrimSpace(signal)
+func (w *Worker) SendSign(signal string) (err error) {
+	signTime, e := time.ParseInLocation(SignalFormat, strings.TrimSpace(signal), time.Local)
 
-		if len(signal) == 0 {
-			return fmt.Errorf("[%s] signal fotmat error: '%s'", w.provider.GetName(), signal)
-		}
-
-		signTime, err := time.ParseInLocation(SignalFormat, signal, time.Local)
-
-		if err != nil {
-			return fmt.Errorf("[%s] signal fotmat error: '%s'", w.provider.GetName(), signal)
-		}
-
-		w.loopTimer <- &Point{true, signTime}
+	if e != nil {
+		return fmt.Errorf("[%s] signal fotmat error: '%s'", w.provider.GetName(), signal)
 	}
 
-	return nil
+	select {
+	case <-w.ctx.Done():
+		err = fmt.Errorf("[%s] worker is closed", w.provider.GetName())
+	case w.loopTimer <- &Point{true, signTime}:
+		w.logger.Infof("[%s] receive signal: %s", w.provider.GetName(), signal)
+	default:
+		err = fmt.Errorf("[%s] worker is busy", w.provider.GetName())
+	}
+
+	return
 }
 
 func (w *Worker) startLoop() {
@@ -57,7 +54,9 @@ func (w *Worker) startLoop() {
 		case <-w.ctx.Done():
 			return
 		case t := <-ticker.C:
-			w.loopTimer <- &Point{false, t}
+			if w.provider.CheckInterval(t) {
+				w.loopTimer <- &Point{false, t}
+			}
 		}
 	}
 }
@@ -78,10 +77,9 @@ func (w *Worker) Run() {
 		case p := <-w.loopTimer:
 			if p.signal {
 				w.logger.Infof("[%s] run by signal", w.provider.GetName())
-				w.provider.Run(p.t)
-			} else if w.provider.CheckInterval(p.t) {
-				w.provider.Run(p.t)
 			}
+
+			w.provider.Run(p.t)
 		}
 	}
 }

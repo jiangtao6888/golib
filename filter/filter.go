@@ -19,10 +19,9 @@ func (f *Filter) Add(str string) {
 		return
 	}
 
-	words := []rune(str)
 	node := f.root
 
-	for _, word := range words {
+	for _, word := range str {
 		nextNode := node.children[word]
 
 		if nextNode == nil {

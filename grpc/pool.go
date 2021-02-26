@@ -1,9 +1,10 @@
 package grpc
 
 import (
-	"google.golang.org/grpc"
 	"sync"
 	"time"
+
+	"google.golang.org/grpc"
 )
 
 type Dialer func(addr string) (*grpc.ClientConn, error)

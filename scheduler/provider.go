@@ -22,7 +22,7 @@ type Provider struct {
 }
 
 func (p *Provider) Init() (err error) {
-	err, p.Interval = NewInterval(p.TimeRule)
+	p.Interval, err = NewInterval(p.TimeRule)
 	return
 }
 

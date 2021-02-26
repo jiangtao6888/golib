@@ -3,10 +3,11 @@ package rabbitmq
 import (
 	"context"
 	"errors"
-	"github.com/marsmay/golib/logger"
-	"github.com/streadway/amqp"
 	"sync"
 	"time"
+
+	"github.com/marsmay/golib/logger"
+	"github.com/streadway/amqp"
 )
 
 type ProducerConfig struct {

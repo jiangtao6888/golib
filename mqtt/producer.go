@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/marsmay/golib/logger"
 	"sync"
 	"time"
+
+	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/marsmay/golib/logger"
 )
 
 type Message struct {

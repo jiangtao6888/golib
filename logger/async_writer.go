@@ -89,7 +89,7 @@ func (l *asyncWriter) bytes(msg *message) []byte {
 	w := l.bytePool.Get().(*bytes.Buffer)
 
 	defer func() {
-		recover()
+		_ = recover()
 		w.Reset()
 		l.bytePool.Put(w)
 	}()

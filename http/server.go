@@ -3,16 +3,17 @@ package http
 import (
 	stdContext "context"
 	"fmt"
-	"github.com/kataras/iris/v12"
-	"github.com/kataras/iris/v12/context"
-	"github.com/kataras/iris/v12/middleware/pprof"
-	"github.com/marsmay/golib/logger"
 	"net/http"
 	"runtime"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/kataras/iris/v12"
+	"github.com/kataras/iris/v12/context"
+	"github.com/kataras/iris/v12/middleware/pprof"
+	"github.com/marsmay/golib/logger"
 )
 
 type TlsConfig struct {
@@ -160,7 +161,8 @@ func (s *Server) Start() {
 func (s *Server) Stop() {
 	s.canceler()
 
-	ctx, _ := stdContext.WithTimeout(stdContext.Background(), 3*time.Second)
+	ctx, canceler := stdContext.WithTimeout(stdContext.Background(), 3*time.Second)
+	defer canceler()
 
 	if err := s.app.Shutdown(ctx); err != nil {
 		s.logger.Errorf("server shutdown error: %s", err)

@@ -32,7 +32,7 @@ func (c *DataConfig) LoadLoc() {
 
 func DefaultDataConfig() *DataConfig {
 	return &DataConfig{
-		Dir:       "./logs",
+		Dir:       "./data",
 		Partition: PartitionDay,
 	}
 }
@@ -57,7 +57,6 @@ func (l *DataLogger) getFile() string {
 
 	switch l.conf.Partition {
 	case PartitionHour:
-		time.Now().Year()
 		return path.Join(l.conf.Dir, fmt.Sprintf("%s%04d%02d%02d.%02d.log", l.conf.Prefix, year, month, day, hour))
 	default:
 		return path.Join(l.conf.Dir, fmt.Sprintf("%s%04d%02d%02d.log", l.conf.Prefix, year, month, day))

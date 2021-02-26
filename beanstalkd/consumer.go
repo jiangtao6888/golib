@@ -2,10 +2,11 @@ package beanstalkd
 
 import (
 	"context"
-	"github.com/kr/beanstalk"
-	"github.com/marsmay/golib/logger"
 	"sync"
 	"time"
+
+	"github.com/kr/beanstalk"
+	"github.com/marsmay/golib/logger"
 )
 
 type ConsumerConfig struct {

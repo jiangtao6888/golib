@@ -2,10 +2,11 @@ package grpc
 
 import (
 	"context"
-	"github.com/marsmay/golib/logger"
-	"google.golang.org/grpc"
 	"net"
 	"strconv"
+
+	"github.com/marsmay/golib/logger"
+	"google.golang.org/grpc"
 )
 
 type Config struct {

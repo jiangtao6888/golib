@@ -2,10 +2,11 @@ package rabbitmq
 
 import (
 	"context"
-	"github.com/marsmay/golib/logger"
-	"github.com/streadway/amqp"
 	"sync"
 	"time"
+
+	"github.com/marsmay/golib/logger"
+	"github.com/streadway/amqp"
 )
 
 type ConsumerConfig struct {
