@@ -25,15 +25,18 @@ func (c *jsonCoder) Marshal(v interface{}) (data []byte, err error) {
 		return json.Marshal(v)
 	}
 
-	bf := bytes.NewBuffer([]byte{})
-	jsonEncoder := json.NewEncoder(bf)
+	w := bytePool.Get().(*bytes.Buffer)
+	defer ResetBytePool(w)
+
+	jsonEncoder := json.NewEncoder(w)
 	jsonEncoder.SetEscapeHTML(c.EscapeHTML)
 
 	if err = jsonEncoder.Encode(v); err != nil {
 		return
 	}
 
-	data = bf.Bytes()
+	data = make([]byte, w.Len())
+	copy(data, w.Bytes())
 	return
 }
 
