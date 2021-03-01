@@ -23,12 +23,11 @@ type TlsConfig struct {
 }
 
 type Config struct {
-	Host    string     `toml:"host" json:"host"`
-	Port    int        `toml:"port" json:"port"`
-	Charset string     `toml:"charset" json:"charset"`
-	Gzip    bool       `toml:"gzip" json:"gzip"`
-	PProf   bool       `toml:"pprof" json:"pprof"`
-	Tls     *TlsConfig `toml:"tls" json:"tls"`
+	Host  string     `toml:"host" json:"host"`
+	Port  int        `toml:"port" json:"port"`
+	Gzip  bool       `toml:"gzip" json:"gzip"`
+	PProf bool       `toml:"pprof" json:"pprof"`
+	Tls   *TlsConfig `toml:"tls" json:"tls"`
 }
 
 func (c *Config) GetAddr() string {
@@ -37,11 +36,8 @@ func (c *Config) GetAddr() string {
 
 func DefaultConfig() *Config {
 	return &Config{
-		Port:    80,
-		Charset: "UTF-8",
-		Tls: &TlsConfig{
-			Enable: false,
-		},
+		Port: 80,
+		Tls:  &TlsConfig{},
 	}
 }
 
