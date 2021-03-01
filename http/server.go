@@ -111,9 +111,9 @@ func (s *Server) AccessLog(ctx *gin.Context) {
 }
 
 func CrossDomain(ctx *gin.Context) {
-	ctx.Header("Access-Control-Allow-Headers", "*")
-	ctx.Header("Access-Control-Allow-Methods", "GET,POST,PUT,OPTIONS")
 	ctx.Header("Access-Control-Allow-Origin", "*")
+	ctx.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS")
+	ctx.Header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept")
 
 	if ctx.Request.Method == http.MethodOptions {
 		ctx.JSON(http.StatusOK, gin.H{"code": 0, "message": "success"})
