@@ -37,7 +37,7 @@ func (c *protoCoder) Marshal(v interface{}) ([]byte, error) {
 }
 
 func (c *protoCoder) DecodeRequest(ctx *gin.Context, v interface{}) (err error) {
-	data, err := GetBody(ctx)
+	data, err := GetRequestBody(ctx)
 
 	if err != nil {
 		return

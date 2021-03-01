@@ -31,7 +31,7 @@ func ResetBytePool(w *bytes.Buffer) {
 	bytePool.Put(w)
 }
 
-func GetBody(ctx *gin.Context) (body []byte, err error) {
+func GetRequestBody(ctx *gin.Context) (body []byte, err error) {
 	if cb, ok := ctx.Get(gin.BodyBytesKey); ok {
 		if cbb, ok := cb.([]byte); ok {
 			body = cbb

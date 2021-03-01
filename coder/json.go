@@ -55,7 +55,7 @@ func (c *jsonCoder) Unmarshal(data []byte, v interface{}) error {
 }
 
 func (c *jsonCoder) DecodeRequest(ctx *gin.Context, v interface{}) (err error) {
-	data, err := GetBody(ctx)
+	data, err := GetRequestBody(ctx)
 
 	if err != nil {
 		return
