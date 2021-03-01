@@ -2,6 +2,7 @@ package redis
 
 import (
 	"errors"
+	"net"
 	"strconv"
 	"sync"
 
@@ -17,7 +18,7 @@ type Config struct {
 }
 
 func (c *Config) GetAddr() string {
-	return c.Host + ":" + strconv.Itoa(c.Port)
+	return net.JoinHostPort(c.Host, strconv.Itoa(c.Port))
 }
 
 type Pool struct {

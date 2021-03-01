@@ -3,6 +3,7 @@ package http
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"runtime"
 	"strconv"
@@ -31,7 +32,7 @@ type Config struct {
 }
 
 func (c *Config) GetAddr() string {
-	return c.Host + ":" + strconv.Itoa(c.Port)
+	return net.JoinHostPort(c.Host, strconv.Itoa(c.Port))
 }
 
 func DefaultConfig() *Config {
