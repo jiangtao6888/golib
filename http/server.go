@@ -88,7 +88,7 @@ func (s *Server) Recovery(ctx *gin.Context) {
 				stacktrace += fmt.Sprintf("%s:%d\n", f, l)
 			}
 
-			request := fmt.Sprintf("%v %s %s %s", strconv.Itoa(ctx.Writer.Status()), ctx.ClientIP(), ctx.Request.Method, ctx.Request.URL.Path)
+			request := fmt.Sprintf("%s | %s %s | %s | %s", ctx.ClientIP(), ctx.Request.Method, ctx.Request.URL.RequestURI(), ctx.Request.UserAgent(), s.router.GetIdentifier(ctx))
 			s.logger.Error(fmt.Sprintf("recovered panic:\nRequest: %s\nTrace: %s\n%s", request, err, stacktrace))
 
 			ctx.Status(http.StatusInternalServerError)
