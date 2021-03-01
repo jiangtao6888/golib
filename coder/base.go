@@ -32,21 +32,24 @@ func ResetBytePool(w *bytes.Buffer) {
 }
 
 func GetRequestBody(ctx *gin.Context) (body []byte, err error) {
-	if cb, ok := ctx.Get(gin.BodyBytesKey); ok {
-		if cbb, ok := cb.([]byte); ok {
-			body = cbb
-		}
-	}
-
-	if body == nil {
-		body, err = ioutil.ReadAll(ctx.Request.Body)
-
-		if err != nil {
+	if b, ok := ctx.Get(gin.BodyBytesKey); ok {
+		if bs, ok := b.([]byte); ok {
+			body = bs
 			return
 		}
-
-		ctx.Set(gin.BodyBytesKey, body)
 	}
 
+	if ctx.Request.Body == nil {
+		return
+	}
+
+	body, err = ioutil.ReadAll(ctx.Request.Body)
+
+	if err != nil {
+		return
+	}
+
+	ctx.Request.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+	ctx.Set(gin.BodyBytesKey, body)
 	return
 }
