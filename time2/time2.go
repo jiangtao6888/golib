@@ -6,9 +6,10 @@ import (
 )
 
 const (
-	DateLayout     = "20060102"
-	DtLayout       = "2006-01-02"
-	DateTimeLayout = "2006-01-02 15:04:05"
+	LayoutDate          = "2006-01-02"
+	LayoutDateShort     = "20060102"
+	LayoutDateTime      = "2006-01-02 15:04:05"
+	LayoutDateTimeShort = "20060102150405"
 
 	TimeDay      = time.Hour * 24
 	TimeThreeDay = TimeDay * 3
@@ -33,15 +34,15 @@ func NowMS(loc ...*time.Location) int64 {
 	return Now(loc...).UnixNano() / 1e6
 }
 
-func TodayStart(t time.Time, loc ...*time.Location) time.Time {
+func DayStart(t time.Time, loc ...*time.Location) time.Time {
 	_loc := time.Local
 
 	if len(loc) > 0 {
 		_loc = loc[0]
 	}
 
-	locDate := Format(t, DateLayout, _loc)
-	locDaystart, _ := time.ParseInLocation(DateLayout, locDate, _loc)
+	locDate := Format(t, LayoutDateShort, _loc)
+	locDaystart, _ := time.ParseInLocation(LayoutDateShort, locDate, _loc)
 	return locDaystart
 }
 
@@ -55,16 +56,20 @@ func Format(t time.Time, layout string, loc ...*time.Location) string {
 	return t.In(_loc).Format(layout)
 }
 
-func FormatD(t time.Time, loc ...*time.Location) string {
-	return Format(t, DateLayout, loc...)
+func Date(t time.Time, loc ...*time.Location) string {
+	return Format(t, LayoutDate, loc...)
 }
 
-func FormatDt(t time.Time, loc ...*time.Location) string {
-	return Format(t, DtLayout, loc...)
+func DateShort(t time.Time, loc ...*time.Location) string {
+	return Format(t, LayoutDateShort, loc...)
 }
 
-func FormatDateTime(t time.Time, loc ...*time.Location) string {
-	return Format(t, DateTimeLayout, loc...)
+func DateTime(t time.Time, loc ...*time.Location) string {
+	return Format(t, LayoutDateTime, loc...)
+}
+
+func DateTimeShort(t time.Time, loc ...*time.Location) string {
+	return Format(t, LayoutDateTimeShort, loc...)
 }
 
 func OffsetTS(offset int64) string {
