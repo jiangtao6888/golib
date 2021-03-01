@@ -12,11 +12,12 @@ const (
 	ContentTypeJSON = "application/json; charset=utf-8"
 )
 
-var JsonCoder = &jsonCoder{EscapeHTML: true, UseNumber: true}
+var JsonCoder = &jsonCoder{EscapeHTML: true, UseNumber: true, DisallowUnknownFields: false}
 
 type jsonCoder struct {
-	EscapeHTML bool
-	UseNumber  bool
+	EscapeHTML            bool
+	UseNumber             bool
+	DisallowUnknownFields bool
 }
 
 func (c *jsonCoder) Marshal(v interface{}) (data []byte, err error) {
@@ -38,7 +39,15 @@ func (c *jsonCoder) Marshal(v interface{}) (data []byte, err error) {
 
 func (c *jsonCoder) Unmarshal(data []byte, v interface{}) error {
 	decoder := json.NewDecoder(bytes.NewReader(data))
-	decoder.UseNumber()
+
+	if c.UseNumber {
+		decoder.UseNumber()
+	}
+
+	if c.DisallowUnknownFields {
+		decoder.DisallowUnknownFields()
+	}
+
 	return decoder.Decode(v)
 }
 
