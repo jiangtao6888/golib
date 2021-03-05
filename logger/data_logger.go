@@ -2,7 +2,6 @@ package logger
 
 import (
 	"fmt"
-	"os"
 	"path"
 	"time"
 )
@@ -39,14 +38,14 @@ func DefaultDataConfig() *DataConfig {
 
 type DataLogger struct {
 	conf   *DataConfig
-	writer *asyncWriter
+	writer IWriter
 }
 
 func NewDataLogger(conf *DataConfig) (l *DataLogger, err error) {
 	conf.LoadLoc()
 
 	l = &DataLogger{conf: conf}
-	l.writer, err = newWriter(conf.Dir, l.getFile)
+	l.writer, err = newAsyncWriter(conf.Dir, l.getFile)
 	return
 }
 
@@ -65,12 +64,7 @@ func (l *DataLogger) getFile() string {
 
 func (l *DataLogger) log(format string, args ...interface{}) {
 	msg := &message{format: format, args: args}
-
-	if l.writer.fd == nil {
-		_, _ = fmt.Fprint(os.Stdout, l.writer.bytes(msg))
-	} else {
-		l.writer.write(msg)
-	}
+	l.writer.write(msg)
 }
 
 func (l *DataLogger) Log(args ...interface{}) {

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 
 	"github.com/gin-gonic/gin"
+	"github.com/marsmay/golib/sync_pool"
 )
 
 const (
@@ -25,8 +26,8 @@ func (c *jsonCoder) Marshal(v interface{}) (data []byte, err error) {
 		return json.Marshal(v)
 	}
 
-	w := bytePool.Get().(*bytes.Buffer)
-	defer ResetBytePool(w)
+	w := sync_pool.BytePool.Get().(*bytes.Buffer)
+	defer sync_pool.ResetBytePool(w)
 
 	jsonEncoder := json.NewEncoder(w)
 	jsonEncoder.SetEscapeHTML(c.EscapeHTML)

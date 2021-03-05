@@ -2,7 +2,6 @@ package logger
 
 import (
 	"fmt"
-	"os"
 	"path"
 	"runtime"
 	"strings"
@@ -34,7 +33,7 @@ func DefaultConfig() *Config {
 
 type Logger struct {
 	conf   *Config
-	writer *asyncWriter
+	writer IWriter
 	level  Level
 	ip     string
 }
@@ -46,7 +45,12 @@ func NewLogger(conf *Config) (l *Logger, err error) {
 		return
 	}
 
-	l.writer, err = newWriter(conf.Dir, l.getFile)
+	if l.conf.Terminal {
+		l.writer = &stdWriter{}
+	} else {
+		l.writer, err = newAsyncWriter(conf.Dir, l.getFile)
+	}
+
 	return
 }
 
@@ -84,29 +88,19 @@ func (l *Logger) getFileInfo() (file string, line int) {
 	return
 }
 
+func (l *Logger) Write(p []byte) (n int, err error) {
+	msg := &message{args: []interface{}{string(p)}, ignoreLF: true}
+	l.writer.write(msg)
+	n = len(p)
+	return
+}
+
 func (l *Logger) Log(level Level, format string, args ...interface{}) {
 	file, line := l.getFileInfo()
 	prefix := l.prefix(level, file, line)
 	msg := &message{prefix: prefix, format: format, args: args}
 
-	if l.conf.Terminal {
-		_, _ = fmt.Fprint(os.Stdout, string(l.writer.bytes(msg)))
-	} else {
-		l.writer.write(msg)
-	}
-}
-
-func (l *Logger) Write(p []byte) (n int, err error) {
-	msg := &message{args: []interface{}{string(p)}, ignoreLF: true}
-
-	if l.conf.Terminal {
-		n, err = fmt.Fprint(os.Stdout, string(l.writer.bytes(msg)))
-	} else {
-		l.writer.write(msg)
-		n = len(p)
-	}
-
-	return
+	l.writer.write(msg)
 }
 
 func (l *Logger) Debug(args ...interface{}) {
