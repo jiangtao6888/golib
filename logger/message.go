@@ -1,10 +1,9 @@
 package logger
 
 import (
-	"bytes"
 	"fmt"
 
-	"github.com/marsmay/golib/sync_pool"
+	"github.com/marsmay/golib/bytes_pool"
 )
 
 type message struct {
@@ -15,12 +14,12 @@ type message struct {
 }
 
 func (msg *message) bytes() []byte {
-	w := sync_pool.BytePool.Get().(*bytes.Buffer)
+	w := bytes_pool.Get()
 
 	defer func() {
 		_ = recover()
 		w.Reset()
-		sync_pool.ResetBytePool(w)
+		bytes_pool.Return(w)
 	}()
 
 	if len(msg.prefix) > 0 {
