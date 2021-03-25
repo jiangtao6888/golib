@@ -2,6 +2,7 @@ package gorm
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	oLogger "github.com/marsmay/golib/logger"
@@ -40,39 +41,37 @@ func (l *logger) Trace(_ context.Context, begin time.Time, fc func() (string, in
 
 	useTime := time.Since(begin)
 
+	var printer func(string, ...interface{})
+
 	if err != nil && logLevel >= oLogger.ErrorLevel {
-		sql, rows := fc()
-
-		if rows == -1 {
-			l.l.Errorf("query: <%s> | %4v | - | %s", utils.FileWithLineNum(), useTime, sql)
-		} else {
-			l.l.Errorf("query: <%s> | %4v | %d rows | %s", utils.FileWithLineNum(), useTime, rows, sql)
-		}
-
+		printer = l.l.Errorf
+	} else if l.slowQueryTime > 0 && useTime > l.slowQueryTime && logLevel >= oLogger.WarnLevel {
+		printer = l.l.Warningf
+	} else if logLevel >= oLogger.DebugLevel {
+		printer = l.l.Debugf
+	} else {
 		return
 	}
 
-	if l.slowQueryTime > 0 && useTime > l.slowQueryTime && logLevel >= oLogger.WarnLevel {
-		sql, rows := fc()
+	source := utils.FileWithLineNum()
 
-		if rows == -1 {
-			l.l.Warningf("query: <%s> | %4v | - | %s", utils.FileWithLineNum(), useTime, sql)
-		} else {
-			l.l.Warningf("query: <%s> | %4v | %d rows | %s", utils.FileWithLineNum(), useTime, rows, sql)
-		}
-
-		return
+	if dirs := strings.Split(source, "/"); len(dirs) >= 3 {
+		source = strings.Join(dirs[len(dirs)-3:], "/")
 	}
 
-	if logLevel >= oLogger.InfoLevel {
-		sql, rows := fc()
+	sql, rows := fc()
 
+	if err != nil {
 		if rows == -1 {
-			l.l.Infof("query: <%s> | %4v | - | %s", utils.FileWithLineNum(), useTime, sql)
+			printer("query: <%s> | %4v | - | %s | Error: %s", source, useTime, sql, err)
 		} else {
-			l.l.Infof("query: <%s> | %4v | %d rows | %s", utils.FileWithLineNum(), useTime, rows, sql)
+			printer("query: <%s> | %4v | %d rows | %s | Error: %s", source, useTime, rows, sql, err)
 		}
-
-		return
+	} else {
+		if rows == -1 {
+			printer("query: <%s> | %4v | - | %s", source, useTime, sql)
+		} else {
+			printer("query: <%s> | %4v | %d rows | %s", source, useTime, rows, sql)
+		}
 	}
 }
