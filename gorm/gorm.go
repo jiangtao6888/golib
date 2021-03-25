@@ -45,7 +45,7 @@ func (p *Pool) Add(name string, c *Config) error {
 	defer p.locker.Unlock()
 
 	orm, err := gorm.Open(mysql.Open(c.GetDsn()), &gorm.Config{
-		Logger: &logger{slowQueryTime: c.SlowQueryTime, l: p.logger},
+		Logger: &logger{deadline: c.SlowQueryTime * time.Millisecond, recorder: p.logger},
 	})
 
 	if err != nil {

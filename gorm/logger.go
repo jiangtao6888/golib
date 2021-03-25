@@ -11,8 +11,8 @@ import (
 )
 
 type logger struct {
-	slowQueryTime time.Duration
-	l             *oLogger.Logger
+	deadline time.Duration
+	recorder *oLogger.Logger
 }
 
 // LogMode log mode
@@ -21,19 +21,19 @@ func (l *logger) LogMode(level gLogger.LogLevel) gLogger.Interface {
 }
 
 func (l *logger) Info(_ context.Context, format string, args ...interface{}) {
-	l.l.Infof(format, args)
+	l.recorder.Infof(format, args)
 }
 
 func (l *logger) Warn(_ context.Context, format string, args ...interface{}) {
-	l.l.Warningf(format, args)
+	l.recorder.Warningf(format, args)
 }
 
 func (l *logger) Error(_ context.Context, format string, args ...interface{}) {
-	l.l.Errorf(format, args)
+	l.recorder.Errorf(format, args)
 }
 
 func (l *logger) Trace(_ context.Context, begin time.Time, fc func() (string, int64), err error) {
-	logLevel := l.l.Level()
+	logLevel := l.recorder.Level()
 
 	if logLevel == oLogger.DisableLevel {
 		return
@@ -44,11 +44,11 @@ func (l *logger) Trace(_ context.Context, begin time.Time, fc func() (string, in
 	var printer func(string, ...interface{})
 
 	if err != nil && logLevel >= oLogger.ErrorLevel {
-		printer = l.l.Errorf
-	} else if l.slowQueryTime > 0 && useTime > l.slowQueryTime && logLevel >= oLogger.WarnLevel {
-		printer = l.l.Warningf
+		printer = l.recorder.Errorf
+	} else if l.deadline > 0 && useTime > l.deadline && logLevel >= oLogger.WarnLevel {
+		printer = l.recorder.Warningf
 	} else if logLevel >= oLogger.DebugLevel {
-		printer = l.l.Debugf
+		printer = l.recorder.Debugf
 	} else {
 		return
 	}
