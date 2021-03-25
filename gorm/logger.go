@@ -63,9 +63,9 @@ func (l *logger) Trace(_ context.Context, begin time.Time, fc func() (string, in
 
 	if err != nil {
 		if rows == -1 {
-			printer("query: <%s> | %4v | - | %s | Error: %s", source, useTime, sql, err)
+			printer("query: <%s> | %4v | - | %s | %s", source, useTime, sql, err)
 		} else {
-			printer("query: <%s> | %4v | %d rows | %s | Error: %s", source, useTime, rows, sql, err)
+			printer("query: <%s> | %4v | %d rows | %s | %s", source, useTime, rows, sql, err)
 		}
 	} else {
 		if rows == -1 {
