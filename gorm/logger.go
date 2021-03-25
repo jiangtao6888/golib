@@ -6,6 +6,7 @@ import (
 
 	oLogger "github.com/marsmay/golib/logger"
 	gLogger "gorm.io/gorm/logger"
+	"gorm.io/gorm/utils"
 )
 
 type logger struct {
@@ -19,15 +20,15 @@ func (l *logger) LogMode(level gLogger.LogLevel) gLogger.Interface {
 }
 
 func (l *logger) Info(_ context.Context, format string, args ...interface{}) {
-	l.l.Log(oLogger.InfoLevel, format, args)
+	l.l.Infof(format, args)
 }
 
 func (l *logger) Warn(_ context.Context, format string, args ...interface{}) {
-	l.l.Log(oLogger.WarnLevel, format, args)
+	l.l.Warningf(format, args)
 }
 
 func (l *logger) Error(_ context.Context, format string, args ...interface{}) {
-	l.l.Log(oLogger.ErrorLevel, format, args)
+	l.l.Errorf(format, args)
 }
 
 func (l *logger) Trace(_ context.Context, begin time.Time, fc func() (string, int64), err error) {
@@ -43,9 +44,9 @@ func (l *logger) Trace(_ context.Context, begin time.Time, fc func() (string, in
 		sql, rows := fc()
 
 		if rows == -1 {
-			l.l.Log(oLogger.ErrorLevel, "query: %4v | - | %s", useTime, sql)
+			l.l.Errorf("query: <%s> | %4v | - | %s", utils.FileWithLineNum(), useTime, sql)
 		} else {
-			l.l.Log(oLogger.ErrorLevel, "query: %4v | %d rows | %s", useTime, rows, sql)
+			l.l.Errorf("query: <%s> | %4v | %d rows | %s", utils.FileWithLineNum(), useTime, rows, sql)
 		}
 
 		return
@@ -55,9 +56,9 @@ func (l *logger) Trace(_ context.Context, begin time.Time, fc func() (string, in
 		sql, rows := fc()
 
 		if rows == -1 {
-			l.l.Log(oLogger.WarnLevel, "query: %4v | - | %s", useTime, sql)
+			l.l.Warningf("query: <%s> | %4v | - | %s", utils.FileWithLineNum(), useTime, sql)
 		} else {
-			l.l.Log(oLogger.WarnLevel, "query: %4v | %d rows | %s", useTime, rows, sql)
+			l.l.Warningf("query: <%s> | %4v | %d rows | %s", utils.FileWithLineNum(), useTime, rows, sql)
 		}
 
 		return
@@ -67,9 +68,9 @@ func (l *logger) Trace(_ context.Context, begin time.Time, fc func() (string, in
 		sql, rows := fc()
 
 		if rows == -1 {
-			l.l.Log(oLogger.InfoLevel, "query: %4v | - | %s", useTime, sql)
+			l.l.Infof("query: <%s> | %4v | - | %s", utils.FileWithLineNum(), useTime, sql)
 		} else {
-			l.l.Log(oLogger.InfoLevel, "query: %4v | %d rows | %s", useTime, rows, sql)
+			l.l.Infof("query: <%s> | %4v | %d rows | %s", utils.FileWithLineNum(), useTime, rows, sql)
 		}
 
 		return
