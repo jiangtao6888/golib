@@ -100,7 +100,9 @@ func (l *Logger) Log(level Level, format string, args ...interface{}) {
 	prefix := l.prefix(level, file, line)
 	msg := &message{prefix: prefix, format: format, args: args}
 
-	l.writer.write(msg)
+	if level <= l.level {
+		l.writer.write(msg)
+	}
 }
 
 func (l *Logger) Debug(args ...interface{}) {
@@ -145,6 +147,10 @@ func (l *Logger) Fatalf(format string, args ...interface{}) {
 
 func (l *Logger) Config() *Config {
 	return l.conf
+}
+
+func (l *Logger) Level() Level {
+	return l.level
 }
 
 func (l *Logger) Close() {
