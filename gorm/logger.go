@@ -6,6 +6,7 @@ import (
 	"time"
 
 	oLogger "github.com/marsmay/golib/logger"
+	"gorm.io/gorm"
 	gLogger "gorm.io/gorm/logger"
 	"gorm.io/gorm/utils"
 )
@@ -40,10 +41,11 @@ func (l *logger) Trace(_ context.Context, begin time.Time, fc func() (string, in
 	}
 
 	useTime := time.Since(begin)
+	hasErr := (err != nil && err != gorm.ErrRecordNotFound)
 
 	var printer func(string, ...interface{})
 
-	if err != nil && logLevel >= oLogger.ErrorLevel {
+	if hasErr && logLevel >= oLogger.ErrorLevel {
 		printer = l.recorder.Errorf
 	} else if l.deadline > 0 && useTime > l.deadline && logLevel >= oLogger.WarnLevel {
 		printer = l.recorder.Warningf
@@ -61,7 +63,7 @@ func (l *logger) Trace(_ context.Context, begin time.Time, fc func() (string, in
 
 	sql, rows := fc()
 
-	if err != nil {
+	if hasErr {
 		if rows == -1 {
 			printer("query: <%s> | %4v | - | %s | %s", source, useTime, sql, err)
 		} else {
