@@ -3,39 +3,61 @@ package rocketmq
 import (
 	"context"
 	"errors"
-	"sync"
-	"time"
+	"fmt"
 
-	rocketmq "github.com/apache/rocketmq-client-go/core"
+	"github.com/apache/rocketmq-client-go/v2"
+	"github.com/apache/rocketmq-client-go/v2/primitive"
+	oProducer "github.com/apache/rocketmq-client-go/v2/producer"
 	"github.com/marsmay/golib/logger"
 )
 
+type Message struct {
+	Topic       string   `json:"topic"`
+	Payload     []byte   `json:"payload"`
+	Tag         string   `json:"tag"`
+	Keys        []string `json:"keys"`
+	ShardingKey string   `json:"sharding_key"`
+	DelayLevel  int      `json:"delay_level"`
+}
+
+func (m *Message) String() string {
+	return fmt.Sprintf("%+v", *m)
+}
+
+func (m *Message) Request() *primitive.Message {
+	msg := primitive.NewMessage(m.Topic, m.Payload)
+
+	if m.Tag != "" {
+		msg.WithTag(m.Tag)
+	}
+
+	if len(m.Keys) > 0 {
+		msg.WithKeys(m.Keys)
+	}
+
+	if m.ShardingKey != "" {
+		msg.WithShardingKey(m.ShardingKey)
+	}
+
+	if m.DelayLevel > 0 {
+		msg.WithDelayTimeLevel(m.DelayLevel)
+	}
+
+	return msg
+}
+
 type ProducerConfig struct {
 	*ConnectConfig
-	Topic   string `toml:"topic" json:"topic"`
-	GroupId string `toml:"group_id" json:"group_id"`
+	GroupId    string `toml:"group_id" json:"group_id"`
+	RetryTimes int    `toml:"retry_times" json:"retry_times"`
 }
 
 type Producer struct {
 	conf     *ProducerConfig
-	queue    chan *Message
 	producer rocketmq.Producer
 	logger   *logger.Logger
 	ctx      context.Context
 	cancel   context.CancelFunc
-	wg       *sync.WaitGroup
-}
-
-func (c *Producer) run() {
-	c.wg.Add(1)
-	go c.send()
-	return
-}
-
-func (c *Producer) Stop() {
-	c.cancel()
-	close(c.queue)
-	c.wg.Wait()
 }
 
 func (c *Producer) closed() bool {
@@ -47,77 +69,71 @@ func (c *Producer) closed() bool {
 	}
 }
 
-func (c *Producer) Send(msg *Message) (err error) {
-	if c.closed() {
-		err = errors.New("producer is stoped")
-		return
-	}
-
-	c.queue <- msg
-	return
-}
-
-func (c *Producer) send() {
-	defer c.wg.Done()
-
-	for msg := range c.queue {
-		res, err := c.producer.SendMessageOrderlyByShardingKey(msg.Request(c.conf.Topic), msg.ShardingKey)
-
-		if err != nil {
-			c.logger.Errorf("publish rocketmq message failed | topic: %s | message: %+v | error: %s", c.conf.Topic, msg, err)
-
-			if err := c.Send(msg); err != nil {
-				c.logger.Errorf("publish rocketmq retry message failed | topic: %s | message: %+v | error: %s", c.conf.Topic, msg, err)
-			}
-
-			time.Sleep(time.Millisecond * 100)
-			continue
-		}
-
-		c.logger.Debugf("send rocketmq message | topic: %s | message: %+v | result: %s", c.conf.Topic, msg, res.String())
-	}
+func (c *Producer) Stop() {
+	c.cancel()
 
 	if err := c.producer.Shutdown(); err != nil {
 		c.logger.Errorf("stop rocketmq producer failed | error: %s", err)
 	}
 }
 
-func (c *Producer) SyncSend(msg *Message) (res *rocketmq.SendResult, err error) {
-	return c.producer.SendMessageOrderlyByShardingKey(msg.Request(c.conf.Topic), msg.ShardingKey)
+func (c *Producer) SendSync(msg *Message) (res *primitive.SendResult, err error) {
+	if c.closed() {
+		err = errors.New("producer is stoped")
+		return
+	}
+
+	return c.producer.SendSync(c.ctx, msg.Request())
+}
+
+func (c *Producer) SendAsync(msg *Message) (err error) {
+	if c.closed() {
+		err = errors.New("producer is stoped")
+		return
+	}
+
+	err = c.producer.SendAsync(c.ctx, func(_ context.Context, res *primitive.SendResult, e error) {
+		if e != nil {
+			c.logger.Errorf("send rocketmq message failed | message: %+v | result: %s | error: %s", msg, res, e)
+		}
+
+		c.logger.Debugf("send rocketmq message | message: %+v | result: %s", msg, res)
+	}, msg.Request())
+	return
 }
 
 func NewProducer(conf *ProducerConfig, logger *logger.Logger) (producer *Producer, err error) {
-	p := &Producer{
-		conf:   conf,
-		queue:  make(chan *Message, 4096),
-		logger: logger,
-		wg:     &sync.WaitGroup{},
+	opts := []oProducer.Option{
+		oProducer.WithNameServer(conf.Endpoints),
 	}
 
-	p.producer, err = rocketmq.NewProducer(&rocketmq.ProducerConfig{
-		ClientConfig: rocketmq.ClientConfig{
-			GroupID:    conf.GroupId,
-			NameServer: conf.Endpoint,
-			Credentials: &rocketmq.SessionCredentials{
-				AccessKey: conf.AccessKey,
-				SecretKey: conf.SecretKey,
-				Channel:   conf.Channel,
-			},
-		},
-		ProducerModel: rocketmq.OrderlyProducer,
-	})
+	if conf.GroupId != "" {
+		opts = append(opts, oProducer.WithGroupName(conf.GroupId))
+	}
+
+	if conf.AccessKey != "" && conf.SecretKey != "" {
+		opts = append(opts, oProducer.WithCredentials(primitive.Credentials{
+			AccessKey:     conf.AccessKey,
+			SecretKey:     conf.SecretKey,
+			SecurityToken: conf.SecurityToken,
+		}))
+	}
+
+	if conf.RetryTimes > 0 {
+		opts = append(opts, oProducer.WithRetry(conf.RetryTimes))
+	}
+
+	p, err := rocketmq.NewProducer(opts...)
 
 	if err != nil {
 		return
 	}
 
-	if err = p.producer.Start(); err != nil {
+	if err = p.Start(); err != nil {
 		return
 	}
 
-	producer = p
+	producer = &Producer{conf: conf, logger: logger, producer: p}
 	producer.ctx, producer.cancel = context.WithCancel(context.Background())
-	producer.run()
-
 	return
 }
