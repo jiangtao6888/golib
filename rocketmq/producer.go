@@ -8,6 +8,7 @@ import (
 	"github.com/apache/rocketmq-client-go/v2"
 	"github.com/apache/rocketmq-client-go/v2/primitive"
 	oProducer "github.com/apache/rocketmq-client-go/v2/producer"
+	"github.com/apache/rocketmq-client-go/v2/rlog"
 	"github.com/marsmay/golib/logger"
 )
 
@@ -48,7 +49,7 @@ func (m *Message) Request() *primitive.Message {
 
 type ProducerConfig struct {
 	*ConnectConfig
-	GroupId    string `toml:"group_id" json:"group_id"`
+	Group      string `toml:"group" json:"group"`
 	RetryTimes int    `toml:"retry_times" json:"retry_times"`
 }
 
@@ -107,8 +108,8 @@ func NewProducer(conf *ProducerConfig, logger *logger.Logger) (producer *Produce
 		oProducer.WithNameServer(conf.Endpoints),
 	}
 
-	if conf.GroupId != "" {
-		opts = append(opts, oProducer.WithGroupName(conf.GroupId))
+	if conf.Group != "" {
+		opts = append(opts, oProducer.WithGroupName(conf.Group))
 	}
 
 	if conf.AccessKey != "" && conf.SecretKey != "" {
@@ -122,6 +123,8 @@ func NewProducer(conf *ProducerConfig, logger *logger.Logger) (producer *Produce
 	if conf.RetryTimes > 0 {
 		opts = append(opts, oProducer.WithRetry(conf.RetryTimes))
 	}
+
+	rlog.SetLogger(&Logger{l: logger})
 
 	p, err := rocketmq.NewProducer(opts...)
 

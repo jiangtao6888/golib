@@ -7,14 +7,16 @@ import (
 	"github.com/apache/rocketmq-client-go/v2"
 	oConsumer "github.com/apache/rocketmq-client-go/v2/consumer"
 	"github.com/apache/rocketmq-client-go/v2/primitive"
+	"github.com/apache/rocketmq-client-go/v2/rlog"
 	"github.com/marsmay/golib/logger"
 )
 
 type ConsumerConfig struct {
 	*ConnectConfig
-	Topic   string   `toml:"topic" json:"topic"`
-	GroupId string   `toml:"group_id" json:"group_id"`
-	Tags    []string `toml:"tags" json:"tags"`
+	Topic    string   `toml:"topic" json:"topic"`
+	Group    string   `toml:"group" json:"group"`
+	FromLast bool     `toml:"from_last" json:"from_last"`
+	Tags     []string `toml:"tags" json:"tags"`
 }
 
 type Consumer struct {
@@ -48,10 +50,13 @@ func NewConsumer(conf *ConsumerConfig, handler func([]byte) error, logger *logge
 		oConsumer.WithNameServer(conf.Endpoints),
 		oConsumer.WithConsumerModel(oConsumer.Clustering),
 		oConsumer.WithConsumerOrder(true),
+		oConsumer.WithGroupName(conf.Group),
 	}
 
-	if conf.GroupId != "" {
-		opts = append(opts, oConsumer.WithGroupName(conf.GroupId))
+	if conf.FromLast {
+		opts = append(opts, oConsumer.WithConsumeFromWhere(oConsumer.ConsumeFromLastOffset))
+	} else {
+		opts = append(opts, oConsumer.WithConsumeFromWhere(oConsumer.ConsumeFromFirstOffset))
 	}
 
 	if conf.AccessKey != "" && conf.SecretKey != "" {
@@ -76,6 +81,8 @@ func NewConsumer(conf *ConsumerConfig, handler func([]byte) error, logger *logge
 		handler: handler,
 		logger:  logger,
 	}
+
+	rlog.SetLogger(&Logger{l: logger})
 
 	if c.consumer, err = rocketmq.NewPushConsumer(opts...); err != nil {
 		return
