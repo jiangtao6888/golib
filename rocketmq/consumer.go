@@ -13,10 +13,11 @@ import (
 
 type ConsumerConfig struct {
 	*ConnectConfig
-	Topic    string   `toml:"topic" json:"topic"`
-	Group    string   `toml:"group" json:"group"`
-	FromLast bool     `toml:"from_last" json:"from_last"`
-	Tags     []string `toml:"tags" json:"tags"`
+	Topic     string   `toml:"topic" json:"topic"`
+	Group     string   `toml:"group" json:"group"`
+	Orderly   bool     `toml:"orderly" json:"orderly"`
+	FromFirst bool     `toml:"from_first" json:"from_first"`
+	Tags      []string `toml:"tags" json:"tags"`
 }
 
 type Consumer struct {
@@ -49,14 +50,17 @@ func NewConsumer(conf *ConsumerConfig, handler func([]byte) error, logger *logge
 	opts := []oConsumer.Option{
 		oConsumer.WithNameServer(conf.Endpoints),
 		oConsumer.WithConsumerModel(oConsumer.Clustering),
-		oConsumer.WithConsumerOrder(true),
 		oConsumer.WithGroupName(conf.Group),
 	}
 
-	if conf.FromLast {
-		opts = append(opts, oConsumer.WithConsumeFromWhere(oConsumer.ConsumeFromLastOffset))
-	} else {
+	if conf.Orderly {
+		opts = append(opts, oConsumer.WithConsumerOrder(true))
+	}
+
+	if conf.FromFirst {
 		opts = append(opts, oConsumer.WithConsumeFromWhere(oConsumer.ConsumeFromFirstOffset))
+	} else {
+		opts = append(opts, oConsumer.WithConsumeFromWhere(oConsumer.ConsumeFromLastOffset))
 	}
 
 	if conf.AccessKey != "" && conf.SecretKey != "" {
