@@ -10,29 +10,34 @@ type ConnectConfig struct {
 }
 
 type Logger struct {
-	l *logger.Logger
+	logger *logger.Logger
+	quiet  bool
 }
 
 func (l *Logger) Debug(msg string, fields map[string]interface{}) {
-	l.l.Debugf("message: %s | fields: %+v", msg, fields)
+	if !l.quiet {
+		l.logger.Debug(msg, fields)
+	}
 }
 
 func (l *Logger) Info(msg string, fields map[string]interface{}) {
-	l.l.Infof("message: %s | fields: %+v", msg, fields)
+	if !l.quiet {
+		l.logger.Info(msg, fields)
+	}
 }
 
 func (l *Logger) Warning(msg string, fields map[string]interface{}) {
-	l.l.Warningf("message: %s | fields: %+v", msg, fields)
+	l.logger.Warning(msg, fields)
 }
 
 func (l *Logger) Error(msg string, fields map[string]interface{}) {
-	l.l.Errorf("message: %s | fields: %+v", msg, fields)
+	l.logger.Error(msg, fields)
 }
 
 func (l *Logger) Fatal(msg string, fields map[string]interface{}) {
-	l.l.Fatalf("message: %s | fields: %+v", msg, fields)
+	l.logger.Fatal(msg, fields)
 }
 
 func (l *Logger) Level(_ string) {}
 
-func (l *Logger) OutputPath(path string) (err error) { return nil }
+func (l *Logger) OutputPath(_ string) (err error) { return nil }

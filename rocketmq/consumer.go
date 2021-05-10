@@ -82,7 +82,7 @@ func NewConsumer(conf *ConsumerConfig, handler func([]byte) error, logger *logge
 		logger:  logger,
 	}
 
-	rlog.SetLogger(&Logger{l: logger})
+	rlog.SetLogger(&Logger{logger: logger, quiet: true})
 
 	if c.consumer, err = rocketmq.NewPushConsumer(opts...); err != nil {
 		return

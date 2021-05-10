@@ -124,7 +124,7 @@ func NewProducer(conf *ProducerConfig, logger *logger.Logger) (producer *Produce
 		opts = append(opts, oProducer.WithRetry(conf.RetryTimes))
 	}
 
-	rlog.SetLogger(&Logger{l: logger})
+	rlog.SetLogger(&Logger{logger: logger, quiet: true})
 
 	p, err := rocketmq.NewProducer(opts...)
 
