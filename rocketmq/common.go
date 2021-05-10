@@ -16,26 +16,26 @@ type Logger struct {
 
 func (l *Logger) Debug(msg string, fields map[string]interface{}) {
 	if !l.quiet {
-		l.logger.Debug(msg, fields)
+		l.logger.Debugf("%s | %+v", msg, fields)
 	}
 }
 
 func (l *Logger) Info(msg string, fields map[string]interface{}) {
 	if !l.quiet {
-		l.logger.Info(msg, fields)
+		l.logger.Infof("%s | %+v", msg, fields)
 	}
 }
 
 func (l *Logger) Warning(msg string, fields map[string]interface{}) {
-	l.logger.Warning(msg, fields)
+	l.logger.Warningf("%s | %+v", msg, fields)
 }
 
 func (l *Logger) Error(msg string, fields map[string]interface{}) {
-	l.logger.Error(msg, fields)
+	l.logger.Errorf("%s | %+v", msg, fields)
 }
 
 func (l *Logger) Fatal(msg string, fields map[string]interface{}) {
-	l.logger.Fatal(msg, fields)
+	l.logger.Fatalf("%s | %+v", msg, fields)
 }
 
 func (l *Logger) Level(_ string) {}
