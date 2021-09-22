@@ -3,7 +3,7 @@ package logger
 import (
 	"fmt"
 
-	"github.com/marsmay/golib/bytes_pool"
+	"github.com/marsmay/golib/pool"
 )
 
 type message struct {
@@ -14,12 +14,12 @@ type message struct {
 }
 
 func (msg *message) bytes() []byte {
-	w := bytes_pool.Get()
+	w := pool.BufBytes.Get()
 
 	defer func() {
 		_ = recover()
 		w.Reset()
-		bytes_pool.Return(w)
+		pool.BufBytes.Put(w)
 	}()
 
 	if len(msg.prefix) > 0 {
