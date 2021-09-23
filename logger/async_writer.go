@@ -2,10 +2,8 @@ package logger
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"os"
-	"sync"
 	"time"
 )
 
@@ -14,7 +12,6 @@ type asyncWriter struct {
 	file     string
 	fd       *os.File
 	writer   *bufio.Writer
-	bytePool *sync.Pool
 	msgQueue chan *message
 	timer    *time.Ticker
 	getFile  func() string
@@ -27,7 +24,6 @@ func newAsyncWriter(dir string, getFile func() string) (writer *asyncWriter, err
 	writer = &asyncWriter{
 		dir:      dir,
 		getFile:  getFile,
-		bytePool: &sync.Pool{New: func() interface{} { return new(bytes.Buffer) }},
 		msgQueue: make(chan *message, 8192),
 		timer:    time.NewTicker(time.Second),
 		end:      make(chan bool, 1),
