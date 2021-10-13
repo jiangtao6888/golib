@@ -75,19 +75,17 @@ func (l *Logger) prefix(level Level, file string, line int) string {
 }
 
 func (l *Logger) getFileInfo() (file string, line int) {
-	for i := 1; ; i++ {
-		_, f, l, ok := runtime.Caller(i)
+	_, file, line, ok := runtime.Caller(3)
 
-		if !ok {
-			return "???", 1
-		} else {
-			if !strings.Contains(f, "golib/logger/logger.go") {
-				if dirs := strings.Split(f, "/"); len(dirs) >= 2 {
-					return dirs[len(dirs)-2] + "/" + dirs[len(dirs)-1], l
-				}
-			}
-		}
+	if !ok {
+		return "???", 1
 	}
+
+	if dirs := strings.Split(file, "/"); len(dirs) >= 2 {
+		return dirs[len(dirs)-2] + "/" + dirs[len(dirs)-1], line
+	}
+
+	return
 }
 
 func (l *Logger) Write(p []byte) (n int, err error) {
