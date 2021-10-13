@@ -80,12 +80,14 @@ func (l *Logger) getFileInfo() (file string, line int) {
 
 		if !ok {
 			return "???", 1
-		} else {
-			if !strings.Contains(f, "golib/logger/logger.go") {
-				if dirs := strings.Split(f, "/"); len(dirs) >= 2 {
-					return dirs[len(dirs)-2] + "/" + dirs[len(dirs)-1], l
-				}
-			}
+		}
+
+		if strings.HasSuffix(f, "logger/logger.go") {
+			continue
+		}
+
+		if dirs := strings.Split(f, "/"); len(dirs) >= 2 {
+			return strings.Join(dirs[len(dirs)-2:], "/"), l
 		}
 	}
 }
