@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-zookeeper/zk"
 	"github.com/marsmay/golib/logger"
-	"github.com/samuel/go-zookeeper/zk"
 )
 
 const (

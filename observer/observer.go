@@ -9,11 +9,11 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/go-zookeeper/zk"
 	"github.com/google/uuid"
 	"github.com/marsmay/golib/logger"
 	"github.com/marsmay/golib/time2"
 	"github.com/marsmay/golib/zookeeper"
-	"github.com/samuel/go-zookeeper/zk"
 )
 
 const (
