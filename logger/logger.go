@@ -43,7 +43,7 @@ func DefaultConfig() *Config {
 		Terminal:   true,
 		ShowIp:     false,
 		UseUtc:     false,
-		TimeFormat: time.RFC3339,
+		TimeFormat: "2006-01-02T15:04:05.999Z07:00",
 	}
 }
 
