@@ -102,7 +102,6 @@ func (l *Logger) prefix(level Level) string {
 	}
 
 	file, line := l.getFileInfo()
-	formaters = append(formaters, "")
 	params = append(params, file, line)
 
 	return fmt.Sprintf(strings.Join(formaters, " "), params...)
