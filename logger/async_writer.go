@@ -12,7 +12,7 @@ type asyncWriter struct {
 	file     string
 	fd       *os.File
 	writer   *bufio.Writer
-	msgQueue chan *message
+	msgQueue chan []byte
 	timer    *time.Ticker
 	getFile  func() string
 	ctx      context.Context
@@ -24,7 +24,7 @@ func newAsyncWriter(dir string, getFile func() string) (writer *asyncWriter, err
 	writer = &asyncWriter{
 		dir:      dir,
 		getFile:  getFile,
-		msgQueue: make(chan *message, 8192),
+		msgQueue: make(chan []byte, 8192),
 		timer:    time.NewTicker(time.Second),
 		end:      make(chan bool, 1),
 	}
@@ -66,7 +66,7 @@ func (l *asyncWriter) start() {
 				l.writer.Reset(l.fd)
 			}
 		} else {
-			_, _ = l.writer.Write(msg.bytes())
+			_, _ = l.writer.Write(msg)
 		}
 	}
 
@@ -79,18 +79,21 @@ func (l *asyncWriter) flush() {
 	}
 }
 
-func (l *asyncWriter) write(msg *message) {
+func (l *asyncWriter) Write(p []byte) (n int, err error) {
 	select {
 	case <-l.ctx.Done():
 	default:
-		l.msgQueue <- msg
+		l.msgQueue <- p
 	}
+
+	return len(p), nil
 }
 
-func (l *asyncWriter) close() {
+func (l *asyncWriter) Close() error {
 	l.cancel()
 	l.timer.Stop()
 	l.msgQueue <- nil
 	close(l.msgQueue)
 	<-l.end
+	return nil
 }

@@ -2,6 +2,7 @@ package strings2
 
 import (
 	"fmt"
+	"github.com/marsmay/golib/math2"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -31,73 +32,34 @@ func IsNum(s string) bool {
 	return err == nil
 }
 
-func InList(val string, list []string) (exists bool) {
-	exists = false
-
+func InList(value string, list []string) bool {
 	for _, v := range list {
-		if val == v {
-			exists = true
-			break
+		if v == value {
+			return true
 		}
 	}
 
-	return
+	return false
 }
 
-func ToList(s, separator string) []string {
+func ToIntList[T math2.Integer](s, separator string) []T {
 	items := strings.Split(s, separator)
-	numbers := make([]string, 0, len(items))
+	numbers := make([]T, 0, len(items))
 
 	for _, v := range items {
 		if n, e := strconv.ParseInt(v, 10, 64); e == nil {
-			numbers = append(numbers, strconv.FormatInt(n, 10))
+			numbers = append(numbers, T(n))
 		}
 	}
 
 	return numbers
 }
 
-func ToInt64List(s, separator string) []int64 {
-	items := strings.Split(s, separator)
-	numbers := make([]int64, 0, len(items))
-
-	for _, v := range items {
-		if n, e := strconv.ParseInt(v, 10, 64); e == nil {
-			numbers = append(numbers, n)
-		}
-	}
-
-	return numbers
-}
-
-func ToIntList(s, separator string) []int {
-	items := strings.Split(s, separator)
-	numbers := make([]int, 0, len(items))
-
-	for _, v := range items {
-		if n, e := strconv.Atoi(v); e == nil {
-			numbers = append(numbers, n)
-		}
-	}
-
-	return numbers
-}
-
-func FromIntList(nums []int, separator string) string {
+func FromIntList[T math2.Integer](nums []T, separator string) string {
 	items := make([]string, 0, len(nums))
 
 	for _, v := range nums {
-		items = append(items, strconv.Itoa(v))
-	}
-
-	return strings.Join(items, separator)
-}
-
-func FromInt64List(nums []int64, separator string) string {
-	items := make([]string, 0, len(nums))
-
-	for _, v := range nums {
-		items = append(items, strconv.FormatInt(v, 10))
+		items = append(items, strconv.FormatInt(int64(v), 10))
 	}
 
 	return strings.Join(items, separator)
@@ -131,8 +93,10 @@ func ListToSet(list []string) map[string]bool {
 func SetToList(set map[string]bool) []string {
 	list := make([]string, 0, len(set))
 
-	for v := range set {
-		list = append(list, v)
+	for k, v := range set {
+		if v {
+			list = append(list, k)
+		}
 	}
 
 	return list

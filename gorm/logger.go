@@ -17,7 +17,7 @@ type logger struct {
 }
 
 // LogMode log mode
-func (l *logger) LogMode(level gLogger.LogLevel) gLogger.Interface {
+func (l *logger) LogMode(_ gLogger.LogLevel) gLogger.Interface {
 	return l
 }
 
@@ -41,7 +41,7 @@ func (l *logger) Trace(_ context.Context, begin time.Time, fc func() (string, in
 	}
 
 	useTime := time.Since(begin)
-	hasErr := (err != nil && err != gorm.ErrRecordNotFound)
+	hasErr := err != nil && err != gorm.ErrRecordNotFound
 
 	var printer func(string, ...interface{})
 

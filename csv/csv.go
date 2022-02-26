@@ -24,7 +24,7 @@ func (w *Writer) Flush() {
 }
 
 func (w *Writer) Close() {
-	w.writer.Flush()
+	w.Flush()
 	_ = w.fd.Close()
 }
 

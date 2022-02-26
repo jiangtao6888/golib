@@ -1,6 +1,7 @@
 package grpc
 
 import (
+	"google.golang.org/grpc/credentials/insecure"
 	"sync"
 	"time"
 
@@ -10,7 +11,7 @@ import (
 type Dialer func(addr string) (*grpc.ClientConn, error)
 
 func DefaultDialer(addr string) (*grpc.ClientConn, error) {
-	return grpc.Dial(addr, grpc.WithInsecure())
+	return grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 }
 
 type Pool struct {

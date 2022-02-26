@@ -2,6 +2,7 @@ package logger
 
 import (
 	"fmt"
+	"io"
 	"path"
 	"time"
 )
@@ -38,7 +39,7 @@ func DefaultDataConfig() *DataConfig {
 
 type DataLogger struct {
 	conf   *DataConfig
-	writer IWriter
+	writer io.WriteCloser
 }
 
 func NewDataLogger(conf *DataConfig) (l *DataLogger, err error) {
@@ -62,17 +63,12 @@ func (l *DataLogger) getFile() string {
 	}
 }
 
-func (l *DataLogger) log(format string, args ...interface{}) {
-	msg := &message{format: format, args: args}
-	l.writer.write(msg)
-}
-
 func (l *DataLogger) Log(args ...interface{}) {
-	l.log("", args...)
+	_, _ = fmt.Fprintln(l.writer, args...)
 }
 
 func (l *DataLogger) Logf(format string, args ...interface{}) {
-	l.log(format, args...)
+	_, _ = fmt.Fprintf(l.writer, format+"\n", args...)
 }
 
 func (l *DataLogger) Config() *DataConfig {
@@ -80,5 +76,5 @@ func (l *DataLogger) Config() *DataConfig {
 }
 
 func (l *DataLogger) Close() {
-	l.writer.close()
+	_ = l.writer.Close()
 }

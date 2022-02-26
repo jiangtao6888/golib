@@ -65,7 +65,6 @@ func (s *Server) Running() bool {
 	}
 }
 
-// recovery panic (500)
 func (s *Server) Recovery(ctx *gin.Context) {
 	defer func() {
 		if err := recover(); err != nil {
@@ -96,7 +95,6 @@ func (s *Server) Recovery(ctx *gin.Context) {
 	ctx.Next()
 }
 
-// record access log
 func (s *Server) AccessLog(ctx *gin.Context) {
 	start := time.Now()
 	ctx.Next()

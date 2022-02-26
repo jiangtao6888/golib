@@ -1,8 +1,30 @@
 package math2
 
-import "math"
+import (
+	"math"
+)
 
-func Max(ns ...int) int {
+type Signed interface {
+	~int | ~int8 | ~int16 | ~int32 | ~int64
+}
+
+type Unsigned interface {
+	~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 | ~uintptr
+}
+
+type Integer interface {
+	Signed | Unsigned
+}
+
+type Float interface {
+	~float32 | ~float64
+}
+
+type Number interface {
+	Integer | Float
+}
+
+func Max[T Number](ns ...T) T {
 	m := ns[0]
 
 	for i := 1; i < len(ns); i++ {
@@ -14,7 +36,7 @@ func Max(ns ...int) int {
 	return m
 }
 
-func Min(ns ...int) int {
+func Min[T Number](ns ...T) T {
 	m := ns[0]
 
 	for i := 1; i < len(ns); i++ {
@@ -26,64 +48,16 @@ func Min(ns ...int) int {
 	return m
 }
 
-func MaxInt64(ns ...int64) int64 {
-	m := ns[0]
-
-	for i := 1; i < len(ns); i++ {
-		if ns[i] > m {
-			m = ns[i]
-		}
-	}
-
-	return m
+func Round[T Float, V Integer](x T) V {
+	return V(math.Floor(float64(x) + 0.5))
 }
 
-func MinInt64(ns ...int64) int64 {
-	m := ns[0]
-
-	for i := 1; i < len(ns); i++ {
-		if ns[i] < m {
-			m = ns[i]
-		}
-	}
-
-	return m
-}
-
-func MaxFloat(ns ...float64) float64 {
-	m := ns[0]
-
-	for i := 1; i < len(ns); i++ {
-		if ns[i] > m {
-			m = ns[i]
-		}
-	}
-
-	return m
-}
-
-func MinFloat(ns ...float64) float64 {
-	m := ns[0]
-
-	for i := 1; i < len(ns); i++ {
-		if ns[i] < m {
-			m = ns[i]
-		}
-	}
-
-	return m
-}
-
-func Round(x float64) int {
-	return int(math.Floor(x + 0.5))
-}
-
-func RoundFloat(f float64, n int) float64 {
+func RoundN[T Float](f T, n int) T {
 	n10 := math.Pow10(n)
-	return math.Trunc(f*n10+0.5) / n10
+	return T(math.Trunc(float64(f)*n10+0.5) / n10)
 }
 
-func Ceil(n, m int) int {
+func Ceil[T Integer](n, m T) T {
 	v := n / m
 
 	if v*m < n {
@@ -93,17 +67,7 @@ func Ceil(n, m int) int {
 	return v
 }
 
-func CeilInt64(n, m int64) int64 {
-	v := n / m
-
-	if v*m < n {
-		return v + 1
-	}
-
-	return v
-}
-
-func IIf(b bool, n, m int) int {
+func IIf[T Number](b bool, n, m T) T {
 	if b {
 		return n
 	}
@@ -111,24 +75,8 @@ func IIf(b bool, n, m int) int {
 	return m
 }
 
-func IIfInt64(b bool, n, m int64) int64 {
-	if b {
-		return n
-	}
-
-	return m
-}
-
-func IIfFloat(b bool, n, m float64) float64 {
-	if b {
-		return n
-	}
-
-	return m
-}
-
-func Range(start int, end int) []int {
-	nums := make([]int, end-start+1)
+func Range[T Integer](start, end T) []T {
+	nums := make([]T, end-start+1)
 
 	for n := start; n <= end; n++ {
 		nums[n-start] = n
@@ -137,7 +85,7 @@ func Range(start int, end int) []int {
 	return nums
 }
 
-func InList(value int, list []int) bool {
+func InList[T Number](value T, list []T) bool {
 	for _, v := range list {
 		if v == value {
 			return true
@@ -147,27 +95,7 @@ func InList(value int, list []int) bool {
 	return false
 }
 
-func InInt64List(value int64, list []int64) bool {
-	for _, v := range list {
-		if v == value {
-			return true
-		}
-	}
-
-	return false
-}
-
-func InFloatList(value float64, list []float64) bool {
-	for _, v := range list {
-		if v == value {
-			return true
-		}
-	}
-
-	return false
-}
-
-func SameInt64List(a1 []int64, a2 []int64) bool {
+func SameList[T Number](a1, a2 []T) bool {
 	if len(a1) != len(a2) {
 		return false
 	}
@@ -181,22 +109,27 @@ func SameInt64List(a1 []int64, a2 []int64) bool {
 	return true
 }
 
-func TrimInt64List(value []int64, removeList []int64) []int64 {
-	result := make([]int64, 0, len(value))
+func TrimList[T Number](value, removeList []T) []T {
+	removeMap := make(map[T]bool, len(removeList))
+
+	for _, v := range removeList {
+		removeMap[v] = true
+	}
+
+	result := make([]T, 0, len(value))
 
 	for _, v := range value {
-		if InInt64List(v, removeList) {
-			continue
+		if !removeMap[v] {
+			result = append(result, v)
 		}
-		result = append(result, v)
 	}
 
 	return result
 }
 
-func UniqueList(list []int) []int {
-	result := make([]int, 0, len(list))
-	flags := make(map[int]bool, len(list))
+func UniqueList[T Number](list []T) []T {
+	result := make([]T, 0, len(list))
+	flags := make(map[T]bool, len(list))
 
 	for _, v := range list {
 		if !flags[v] {
@@ -209,22 +142,7 @@ func UniqueList(list []int) []int {
 	return result
 }
 
-func UniqueInt64List(list []int64) []int64 {
-	result := make([]int64, 0, len(list))
-	flags := make(map[int64]bool, len(list))
-
-	for _, v := range list {
-		if !flags[v] {
-			result = append(result, v)
-		}
-
-		flags[v] = true
-	}
-
-	return result
-}
-
-func SumInt64List(list []int64) (sum int64) {
+func SumList[T Number](list []T) (sum T) {
 	for _, v := range list {
 		sum += v
 	}
@@ -232,18 +150,18 @@ func SumInt64List(list []int64) (sum int64) {
 	return
 }
 
-func AvgInt64List(list []int64) (avg int64) {
+func AvgList[T Number](list []T) (avg T) {
 	if n := len(list); n > 0 {
-		return SumInt64List(list) / int64(n)
+		return SumList(list) / T(n)
 	}
 
 	return
 }
 
-func Percent(num, denom int64, decimal int) float64 {
+func Percent[T Number, V Float](num, denom T, decimal int) V {
 	if denom <= 0 {
 		return 0
 	}
 
-	return RoundFloat(float64(num*100)/float64(denom), decimal)
+	return V(RoundN(float64(num*100)/float64(denom), decimal))
 }
