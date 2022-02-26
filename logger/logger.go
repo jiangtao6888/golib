@@ -79,7 +79,7 @@ func (l *Logger) getFile() string {
 	return path.Join(l.conf.Dir, l.conf.Prefix+l.now().Format("20060102.log"))
 }
 
-func (l *Logger) writePrefix(level Level) {
+func (l *Logger) prefix(level Level) string {
 	var (
 		formaters []string
 		params    []interface{}
@@ -105,7 +105,7 @@ func (l *Logger) writePrefix(level Level) {
 	formaters = append(formaters, "")
 	params = append(params, file, line)
 
-	_, _ = fmt.Fprintf(l.writer, strings.Join(formaters, " "), params...)
+	return fmt.Sprintf(strings.Join(formaters, " "), params...)
 }
 
 func (l *Logger) getFileInfo() (file string, line int) {
@@ -128,58 +128,50 @@ func (l *Logger) Write(p []byte) (n int, err error) {
 	return l.writer.Write(p)
 }
 
-func (l *Logger) Log(level Level, format string, args ...interface{}) {
-	if level > l.level {
-		return
-	}
-
-	l.writePrefix(level)
-
-	if format == "" {
-		_, _ = fmt.Fprintln(l.writer, args...)
-	} else {
-		_, _ = fmt.Fprintf(l.writer, format+"\n", args...)
+func (l *Logger) Log(level Level, message string) {
+	if level <= l.level {
+		_, _ = fmt.Fprintln(l.writer, l.prefix(level), message)
 	}
 }
 
 func (l *Logger) Debug(args ...interface{}) {
-	l.Log(DebugLevel, "", args...)
+	l.Log(DebugLevel, fmt.Sprint(args...))
 }
 
 func (l *Logger) Debugf(format string, args ...interface{}) {
-	l.Log(DebugLevel, format, args...)
+	l.Log(DebugLevel, fmt.Sprintf(format, args...))
 }
 
 func (l *Logger) Info(args ...interface{}) {
-	l.Log(InfoLevel, "", args...)
+	l.Log(InfoLevel, fmt.Sprint(args...))
 }
 
 func (l *Logger) Infof(format string, args ...interface{}) {
-	l.Log(InfoLevel, format, args...)
+	l.Log(InfoLevel, fmt.Sprintf(format, args...))
 }
 
 func (l *Logger) Warning(args ...interface{}) {
-	l.Log(WarnLevel, "", args...)
+	l.Log(WarnLevel, fmt.Sprint(args...))
 }
 
 func (l *Logger) Warningf(format string, args ...interface{}) {
-	l.Log(WarnLevel, format, args...)
+	l.Log(WarnLevel, fmt.Sprintf(format, args...))
 }
 
 func (l *Logger) Error(args ...interface{}) {
-	l.Log(ErrorLevel, "", args...)
+	l.Log(ErrorLevel, fmt.Sprint(args...))
 }
 
 func (l *Logger) Errorf(format string, args ...interface{}) {
-	l.Log(ErrorLevel, format, args...)
+	l.Log(ErrorLevel, fmt.Sprintf(format, args...))
 }
 
 func (l *Logger) Fatal(args ...interface{}) {
-	l.Log(FatalLevel, "", args...)
+	l.Log(FatalLevel, fmt.Sprint(args...))
 }
 
 func (l *Logger) Fatalf(format string, args ...interface{}) {
-	l.Log(FatalLevel, format, args...)
+	l.Log(FatalLevel, fmt.Sprintf(format, args...))
 }
 
 func (l *Logger) Config() *Config {
