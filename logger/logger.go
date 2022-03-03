@@ -147,10 +147,12 @@ func (l *Logger) format(level Level, format string, args ...interface{}) []byte 
 	w.WriteByte(' ')
 
 	if len(format) == 0 {
-		_, _ = fmt.Fprintln(w, args...)
+		_, _ = fmt.Fprint(w, args...)
 	} else {
 		_, _ = fmt.Fprintf(w, format, args...)
 	}
+
+	w.WriteByte('\n')
 
 	b := make([]byte, w.Len())
 	copy(b, w.Bytes())
