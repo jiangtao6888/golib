@@ -106,34 +106,6 @@ func (l *Logger) getFileInfo() (file string, line int) {
 	return "???", 0
 }
 
-func (l *Logger) prefix(buff *bytes.Buffer, level Level) (n int, err error) {
-	var (
-		formaters []string
-		params    []interface{}
-	)
-
-	if l.conf.ShowIp && localIp != "" {
-		formaters = append(formaters, "(%s)")
-		params = append(params, localIp)
-	}
-
-	nowTime := time.Now().Format(l.conf.TimeFormat)
-	levelText := GetLevelText(level, l.conf.Color)
-	formaters = append(formaters, "%s %s")
-	params = append(params, levelText, nowTime)
-
-	if f := "<%s:%d>"; l.conf.Color {
-		formaters = append(formaters, Blue(f))
-	} else {
-		formaters = append(formaters, f)
-	}
-
-	file, line := l.getFileInfo()
-	params = append(params, file, line)
-
-	return fmt.Fprintf(buff, strings.Join(formaters, " "), params...)
-}
-
 func (l *Logger) format(level Level, format string, args ...interface{}) []byte {
 	w := l.bytePool.Get().(*bytes.Buffer)
 
@@ -142,9 +114,24 @@ func (l *Logger) format(level Level, format string, args ...interface{}) []byte 
 		l.bytePool.Put(w)
 	}()
 
-	_, _ = l.prefix(w, level)
+	if l.conf.ShowIp && localIp != "" {
+		w.WriteByte('(')
+		w.WriteString(localIp)
+		w.WriteString(") ")
+	}
 
+	w.WriteString(GetLevelText(level, l.conf.Color))
 	w.WriteByte(' ')
+	w.WriteString(time.Now().Format(l.conf.TimeFormat))
+	w.WriteByte(' ')
+
+	file, line := l.getFileInfo()
+
+	if s := fmt.Sprintf("<%s:%d> ", file, line); l.conf.Color {
+		w.WriteString(Blue(s))
+	} else {
+		w.WriteString(s)
+	}
 
 	if len(format) == 0 {
 		_, _ = fmt.Fprint(w, args...)
@@ -156,7 +143,6 @@ func (l *Logger) format(level Level, format string, args ...interface{}) []byte 
 
 	b := make([]byte, w.Len())
 	copy(b, w.Bytes())
-
 	return b
 }
 
